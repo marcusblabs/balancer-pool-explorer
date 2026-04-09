@@ -1,0 +1,8 @@
+# macOS
+.DS_Store
+
+# Claude Code internal state
+.claude/
+
+# Private BD research — not meant to be published alongside the explorer
+pool-benchmarking/

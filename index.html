@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Balancer Pool Dashboard</title>
+<style>
+  :root {
+    /* Balancer / Defilytica-inspired warm palette */
+    --bg-primary: #1A202C;
+    --bg-secondary: #171923;
+    --bg-tertiary: #2D3748;
+    --bg-hover: #2D3748;
+    --bg-card: #1A202C;
+    --text-primary: #F7FAFC;
+    --text-secondary: #A0AEC0;
+    --text-muted: #718096;
+    --accent: #B68449;
+    --accent-light: #E6C6A0;
+    --accent-hover: #92693A;
+    --green: #00d395;
+    --green-dim: rgba(0, 211, 149, 0.12);
+    --red: #ea6249;
+    --red-dim: rgba(234, 98, 73, 0.12);
+    --yellow: #EA9A43;
+    --yellow-dim: rgba(234, 154, 67, 0.12);
+    --blue: #457dff;
+    --blue-dim: rgba(69, 125, 255, 0.12);
+    --purple: #7f6ae8;
+    --purple-dim: rgba(127, 106, 232, 0.10);
+    --sand: #E5D3BE;
+    --sand-dim: rgba(229, 211, 190, 0.10);
+    --brown: #B68449;
+    --border: rgba(255, 255, 255, 0.06);
+    --border-strong: rgba(255, 255, 255, 0.10);
+    --radius: 8px;
+    --radius-sm: 6px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+  }
+
+  .header {
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    background: var(--bg-secondary);
+  }
+
+  .header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.3px;
+  }
+
+  .header-stats {
+    display: flex;
+    gap: 28px;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  .header-stats .stat-value {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 14px;
+    margin-top: 2px;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .controls {
+    padding: 14px 32px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-card);
+  }
+
+  .search-box {
+    flex: 1;
+    min-width: 200px;
+    max-width: 360px;
+    padding: 8px 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-box:focus { border-color: var(--accent); }
+  .search-box::placeholder { color: var(--text-muted); }
+
+  select, .btn {
+    padding: 8px 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 13px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  select:hover, .btn:hover { border-color: var(--accent); background: var(--bg-hover); color: var(--text-primary); }
+
+  select option { background: var(--bg-secondary); color: var(--text-primary); }
+
+  .btn-accent {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .btn-accent:hover { background: var(--accent-hover); }
+
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+  .table-container {
+    overflow-x: auto;
+    padding: 0 16px 32px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 1200px;
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    background: var(--bg-card);
+    padding: 11px 14px;
+    text-align: left;
+    font-weight: 500;
+    color: var(--text-muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    border-bottom: 1px solid var(--border-strong);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    transition: color 0.2s;
+  }
+
+  thead th:hover { color: var(--text-primary); }
+  thead th.sorted { color: var(--sand); }
+
+  thead th .sort-arrow {
+    display: inline-block;
+    margin-left: 4px;
+    font-size: 10px;
+    opacity: 0.3;
+  }
+
+  thead th.sorted .sort-arrow { opacity: 1; }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
+  tbody tr:hover { background: var(--bg-hover); }
+
+  tbody td {
+    padding: 10px 14px;
+    white-space: nowrap;
+    vertical-align: middle;
+    color: var(--text-secondary);
+  }
+
+  .pool-name {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-width: 280px;
+  }
+
+  .pool-name .name {
+    font-weight: 500;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pool-name .tokens {
+    font-size: 11px;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pool-link {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 11px;
+    transition: color 0.15s;
+  }
+
+  .pool-link:hover { color: var(--sand); text-decoration: none; }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .badge-type {
+    background: var(--sand-dim);
+    color: var(--accent-light);
+  }
+
+  .badge-chain {
+    background: var(--blue-dim);
+    color: var(--blue);
+  }
+
+  .badge-hook {
+    background: var(--purple-dim);
+    color: var(--purple);
+  }
+
+  .badge-v2 {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-muted);
+  }
+
+  .badge-v3 {
+    background: var(--green-dim);
+    color: var(--green);
+  }
+
+  .numeric { text-align: right; font-variant-numeric: tabular-nums; }
+
+  .usage-high { color: var(--green); font-weight: 500; }
+  .usage-medium { color: var(--accent-light); }
+  .usage-low { color: var(--text-muted); }
+
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+
+  .spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border-strong);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 12px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 16px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
+  }
+
+  .error {
+    padding: 40px;
+    text-align: center;
+    color: var(--red);
+  }
+
+  .fee-pct { color: var(--accent-light); }
+
+  .pool-address {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  /* Subtle gradient overlay on page */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 400px;
+    background: radial-gradient(ellipse at 50% 0%, rgba(182, 132, 73, 0.04) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .header, .controls, .table-container, .pagination { position: relative; z-index: 1; }
+
+  /* ---------- Responsive: tablet ---------- */
+  @media (max-width: 900px) {
+    .header {
+      padding: 14px 16px;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 14px;
+    }
+    .header h1 { font-size: 18px; }
+    .header-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 14px 16px;
+      width: 100%;
+    }
+    .header-stats .stat-value { font-size: 15px; }
+    .controls {
+      padding: 10px 16px;
+      gap: 8px;
+    }
+    .search-box {
+      max-width: none;
+      flex: 1 1 100%;
+      padding: 10px 12px;
+      font-size: 14px;
+    }
+    select, .btn {
+      flex: 1 1 calc(50% - 4px);
+      min-width: 0;
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+    table { min-width: auto; }
+    .table-container { padding: 0 8px 24px; }
+    .pool-name { max-width: none; }
+    /* Columns hidden at tablet width and below */
+    th.hide-md, td.hide-md { display: none !important; }
+  }
+
+  /* ---------- Responsive: phone ---------- */
+  @media (max-width: 480px) {
+    .header-stats {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px 14px;
+    }
+    .header-stats > div { font-size: 10px; }
+    .header-stats .stat-value { font-size: 14px; }
+    thead th {
+      padding: 8px 8px;
+      font-size: 10px;
+      letter-spacing: 0.3px;
+    }
+    tbody td {
+      padding: 9px 8px;
+      font-size: 12px;
+    }
+    .pool-name .name { font-size: 12px; }
+    .pool-name .tokens { font-size: 10px; }
+    .badge { padding: 2px 6px; font-size: 9px; }
+    /* Columns hidden on phones only (visible on tablets) */
+    th.hide-sm, td.hide-sm { display: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Balancer Pool Explorer</h1>
+  <div class="header-stats">
+    <div>
+      <div>Total Pools</div>
+      <div class="stat-value" id="stat-pools">-</div>
+    </div>
+    <div>
+      <div>Total TVL</div>
+      <div class="stat-value" id="stat-tvl">-</div>
+    </div>
+    <div>
+      <div>Total Vol 24h</div>
+      <div class="stat-value" id="stat-vol">-</div>
+    </div>
+    <div title="Swap fees collected across the filtered pools in the last 24h">
+      <div>Swap Fees 24h</div>
+      <div class="stat-value" id="stat-swap-fees">-</div>
+    </div>
+    <div title="Yield captured from rate-provider / yield-bearing tokens in the last 24h">
+      <div>Yield 24h</div>
+      <div class="stat-value" id="stat-yield">-</div>
+    </div>
+    <div title="Surplus from CoW AMM hooks / MEV capture in the last 24h">
+      <div>Surplus 24h</div>
+      <div class="stat-value" id="stat-surplus">-</div>
+    </div>
+    <div>
+      <div>Last Updated</div>
+      <div class="stat-value" id="stat-time">-</div>
+    </div>
+  </div>
+</div>
+
+<div class="controls">
+  <input type="text" class="search-box" id="search" placeholder="Search pools, tokens, addresses...">
+
+  <select id="filter-chain">
+    <option value="">All Chains</option>
+  </select>
+
+  <select id="filter-type">
+    <option value="">All Types</option>
+  </select>
+
+  <select id="filter-version">
+    <option value="">All Versions</option>
+    <option value="2">v2</option>
+    <option value="3">v3</option>
+  </select>
+
+  <select id="filter-hook">
+    <option value="">All Hooks</option>
+    <option value="yes">Has Hook</option>
+    <option value="no">No Hook</option>
+  </select>
+
+  <select id="filter-min-tvl">
+    <option value="0">Min TVL: Any</option>
+    <option value="1000">Min TVL: $1K</option>
+    <option value="10000" selected>Min TVL: $10K</option>
+    <option value="100000">Min TVL: $100K</option>
+    <option value="1000000">Min TVL: $1M</option>
+    <option value="10000000">Min TVL: $10M</option>
+  </select>
+
+  <button class="btn btn-accent" id="btn-refresh">Refresh</button>
+  <button class="btn" id="btn-export" title="Download the currently filtered pools as CSV">Download CSV</button>
+</div>
+
+<div class="table-container">
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    Loading pools from Balancer API...
+  </div>
+
+  <div class="error" id="error" style="display:none"></div>
+
+  <table id="pool-table" style="display:none">
+    <thead>
+      <tr>
+        <th data-sort="name">Pool <span class="sort-arrow">&#9650;</span></th>
+        <th data-sort="type" class="hide-sm">Type <span class="sort-arrow">&#9650;</span></th>
+        <th data-sort="chain" class="hide-sm">Chain <span class="sort-arrow">&#9650;</span></th>
+        <th data-sort="version" class="hide-md">Ver <span class="sort-arrow">&#9650;</span></th>
+        <th data-sort="hook" class="hide-md">Hook <span class="sort-arrow">&#9650;</span></th>
+        <th data-sort="tvl" class="numeric sorted">TVL <span class="sort-arrow">&#9660;</span></th>
+        <th data-sort="volume" class="numeric">Vol 24h <span class="sort-arrow">&#9650;</span></th>
+        <th data-sort="fees" class="numeric hide-md">Fees 24h <span class="sort-arrow">&#9650;</span></th>
+        <th data-sort="swapFee" class="numeric hide-md">Swap Fee <span class="sort-arrow">&#9650;</span></th>
+        <th data-sort="yieldApr" class="numeric" title="APR from token yield (rate-provider / IB_YIELD items)">Yield APR <span class="sort-arrow">&#9650;</span></th>
+        <th data-sort="usage" class="numeric hide-sm">Usage (Vol/TVL) <span class="sort-arrow">&#9650;</span></th>
+        <th data-sort="holders" class="numeric hide-md">Holders <span class="sort-arrow">&#9650;</span></th>
+      </tr>
+    </thead>
+    <tbody id="pool-tbody"></tbody>
+  </table>
+</div>
+
+<div class="pagination" id="pagination" style="display:none">
+  <button class="btn btn-sm" id="btn-prev">Prev</button>
+  <span id="page-info"></span>
+  <button class="btn btn-sm" id="btn-next">Next</button>
+</div>
+
+<script>
+const API = 'https://api-v3.balancer.fi/';
+const PAGE_SIZE = 50;
+const BALANCER_APP = 'https://balancer.fi/pools';
+
+let allPools = [];
+let filteredPools = [];
+let sortKey = 'tvl';
+let sortDir = 'desc';
+let currentPage = 0;
+
+// Pool types we never want to show in the explorer.
+//   LIQUIDITY_BOOTSTRAPPING  - one-sided launch pools, user requested removal
+//   INVESTMENT               - deprecated Balancer v1/v2 managed pools
+//   ELEMENT                  - deprecated Element Finance yield-token pools
+//   LINEAR                   - deprecated Aave linear pools (replaced by ERC4626 wrappers in v3)
+// Balancer's own frontend does not display any of these by default.
+const HIDDEN_POOL_TYPES = new Set([
+  'LIQUIDITY_BOOTSTRAPPING',
+  'INVESTMENT',
+  'ELEMENT',
+  'LINEAR',
+]);
+
+// Chain display names and explorer URLs
+const CHAIN_INFO = {
+  MAINNET: { name: 'Ethereum', explorer: 'https://etherscan.io/address/' },
+  ARBITRUM: { name: 'Arbitrum', explorer: 'https://arbiscan.io/address/' },
+  OPTIMISM: { name: 'Optimism', explorer: 'https://optimistic.etherscan.io/address/' },
+  POLYGON: { name: 'Polygon', explorer: 'https://polygonscan.com/address/' },
+  BASE: { name: 'Base', explorer: 'https://basescan.org/address/' },
+  GNOSIS: { name: 'Gnosis', explorer: 'https://gnosisscan.io/address/' },
+  AVALANCHE: { name: 'Avalanche', explorer: 'https://snowtrace.io/address/' },
+  SONIC: { name: 'Sonic', explorer: 'https://sonicscan.org/address/' },
+  FRAXTAL: { name: 'Fraxtal', explorer: 'https://fraxscan.com/address/' },
+  MODE: { name: 'Mode', explorer: 'https://modescan.io/address/' },
+  FANTOM: { name: 'Fantom', explorer: 'https://ftmscan.com/address/' },
+  ZKEVM: { name: 'zkEVM', explorer: 'https://zkevm.polygonscan.com/address/' },
+  XLAYER: { name: 'X Layer', explorer: 'https://www.okx.com/web3/explorer/xlayer/address/' },
+  PLASMA: { name: 'Plasma', explorer: '' },
+  HYPEREVM: { name: 'HyperEVM', explorer: '' },
+  MONAD: { name: 'Monad', explorer: '' },
+  SEPOLIA: { name: 'Sepolia', explorer: 'https://sepolia.etherscan.io/address/' },
+};
+
+const CHAIN_SLUG = {
+  MAINNET: 'ethereum',
+  ARBITRUM: 'arbitrum',
+  OPTIMISM: 'optimism',
+  POLYGON: 'polygon',
+  BASE: 'base',
+  GNOSIS: 'gnosis-chain',
+  AVALANCHE: 'avalanche',
+  SONIC: 'sonic',
+  FRAXTAL: 'fraxtal',
+  MODE: 'mode',
+};
+
+function fmt$(val) {
+  const n = parseFloat(val);
+  if (isNaN(n)) return '-';
+  if (n >= 1e9) return '$' + (n / 1e9).toFixed(2) + 'B';
+  if (n >= 1e6) return '$' + (n / 1e6).toFixed(2) + 'M';
+  if (n >= 1e3) return '$' + (n / 1e3).toFixed(1) + 'K';
+  if (n >= 1) return '$' + n.toFixed(2);
+  if (n > 0) return '$' + n.toFixed(4);
+  return '$0';
+}
+
+function fmtPct(val) {
+  const n = parseFloat(val);
+  if (isNaN(n)) return '-';
+  return (n * 100).toFixed(n < 0.0001 ? 4 : n < 0.01 ? 3 : 2) + '%';
+}
+
+function fmtApr(val) {
+  const n = parseFloat(val);
+  if (isNaN(n) || n === 0) return '-';
+  // aprItems are already expressed as fractions (e.g. 0.042 = 4.2%)
+  return (n * 100).toFixed(2) + '%';
+}
+
+function fmtUsage(vol, tvl) {
+  const v = parseFloat(vol);
+  const t = parseFloat(tvl);
+  if (!t || isNaN(v) || isNaN(t)) return { text: '-', cls: 'usage-low', val: 0 };
+  const ratio = v / t;
+  let cls = 'usage-low';
+  if (ratio >= 0.5) cls = 'usage-high';
+  else if (ratio >= 0.1) cls = 'usage-medium';
+  return { text: (ratio * 100).toFixed(2) + '%', cls, val: ratio };
+}
+
+function fmtNum(val) {
+  const n = parseInt(val);
+  if (isNaN(n)) return '-';
+  return n.toLocaleString();
+}
+
+function poolUrl(pool) {
+  const slug = CHAIN_SLUG[pool.chain] || pool.chain.toLowerCase();
+  return `${BALANCER_APP}/${slug}/v${pool.protocolVersion}/${pool.address}`;
+}
+
+function explorerUrl(pool) {
+  const info = CHAIN_INFO[pool.chain];
+  if (!info || !info.explorer) return null;
+  return info.explorer + pool.address;
+}
+
+async function fetchPools() {
+  // tagNotIn: ["BLACK_LISTED"] is the same filter Balancer's own frontend uses
+  // to hide pools the team has flagged as broken, deprecated, test, or scam.
+  const query = `{
+    poolGetPools(
+      first: 1000
+      skip: 0
+      orderBy: totalLiquidity
+      orderDirection: desc
+      where: { minTvl: 0, tagNotIn: ["BLACK_LISTED"] }
+    ) {
+      id
+      name
+      address
+      type
+      chain
+      symbol
+      protocolVersion
+      createTime
+      hasErc4626
+      hook {
+        address
+        type
+      }
+      dynamicData {
+        totalLiquidity
+        volume24h
+        fees24h
+        yieldCapture24h
+        surplus24h
+        swapFee
+        holdersCount
+        lifetimeVolume
+        lifetimeSwapFees
+        swapEnabled
+        isPaused
+        isInRecoveryMode
+        aprItems {
+          apr
+          type
+          id
+        }
+      }
+      poolTokens {
+        symbol
+        address
+      }
+    }
+  }`;
+
+  const res = await fetch(API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+  });
+
+  if (!res.ok) throw new Error(`API returned ${res.status}`);
+  const json = await res.json();
+  if (json.errors) throw new Error(json.errors.map(e => e.message).join(', '));
+  return json.data.poolGetPools;
+}
+
+function processPool(p) {
+  const d = p.dynamicData;
+  const tvl = parseFloat(d.totalLiquidity) || 0;
+  const vol = parseFloat(d.volume24h) || 0;
+  const usage = tvl > 0 ? vol / tvl : 0;
+  const aprItems = d.aprItems || [];
+  const totalApr = aprItems.reduce((sum, item) => sum + (parseFloat(item.apr) || 0), 0);
+  // "Yield APR" = APR coming from the tokens themselves (rate-provider / interest-bearing yield)
+  // Balancer API tags these with type IB_YIELD. We match any *YIELD* type to be safe.
+  const yieldApr = aprItems
+    .filter(i => i.type && /YIELD/i.test(i.type))
+    .reduce((sum, item) => sum + (parseFloat(item.apr) || 0), 0);
+
+  // Balancer's "Yield 24h" headline breaks down into these three pieces.
+  const swapFees24h = parseFloat(d.fees24h) || 0;
+  const yield24h = parseFloat(d.yieldCapture24h) || 0;
+  const surplus24h = parseFloat(d.surplus24h) || 0;
+
+  return {
+    ...p,
+    tvl,
+    vol,
+    fees: swapFees24h,         // kept for backwards compat (old sort key)
+    swapFees24h,
+    yield24h,
+    surplus24h,
+    totalYield24h: swapFees24h + yield24h + surplus24h,
+    swapFee: parseFloat(d.swapFee) || 0,
+    usage,
+    holders: parseInt(d.holdersCount) || 0,
+    totalApr,
+    yieldApr,
+    hookType: p.hook ? p.hook.type : null,
+    tokenSymbols: p.poolTokens.map(t => t.symbol).join(' / '),
+    searchText: [
+      p.name, p.address, p.type, p.chain,
+      ...p.poolTokens.map(t => t.symbol),
+      p.hook ? p.hook.type : '',
+    ].join(' ').toLowerCase(),
+  };
+}
+
+function populateFilters() {
+  const chains = [...new Set(allPools.map(p => p.chain))].sort();
+  const types = [...new Set(allPools.map(p => p.type))].sort();
+
+  const chainSelect = document.getElementById('filter-chain');
+  chains.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c;
+    opt.textContent = (CHAIN_INFO[c] && CHAIN_INFO[c].name) || c;
+    chainSelect.appendChild(opt);
+  });
+
+  const typeSelect = document.getElementById('filter-type');
+  types.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t;
+    opt.textContent = t.replace(/_/g, ' ');
+    typeSelect.appendChild(opt);
+  });
+}
+
+function applyFilters() {
+  const search = document.getElementById('search').value.toLowerCase().trim();
+  const chain = document.getElementById('filter-chain').value;
+  const type = document.getElementById('filter-type').value;
+  const version = document.getElementById('filter-version').value;
+  const hook = document.getElementById('filter-hook').value;
+  const minTvl = parseFloat(document.getElementById('filter-min-tvl').value) || 0;
+
+  filteredPools = allPools.filter(p => {
+    if (search && !p.searchText.includes(search)) return false;
+    if (chain && p.chain !== chain) return false;
+    if (type && p.type !== type) return false;
+    if (version && p.protocolVersion !== parseInt(version)) return false;
+    if (hook === 'yes' && !p.hookType) return false;
+    if (hook === 'no' && p.hookType) return false;
+    if (p.tvl < minTvl) return false;
+    return true;
+  });
+
+  applySorting();
+  currentPage = 0;
+  render();
+}
+
+function applySorting() {
+  const keyFn = {
+    name: p => p.name.toLowerCase(),
+    type: p => p.type,
+    chain: p => p.chain,
+    version: p => p.protocolVersion,
+    hook: p => p.hookType || '',
+    tvl: p => p.tvl,
+    volume: p => p.vol,
+    fees: p => p.swapFees24h,
+    swapFee: p => p.swapFee,
+    yieldApr: p => p.yieldApr,
+    usage: p => p.usage,
+    holders: p => p.holders,
+  };
+
+  const fn = keyFn[sortKey] || keyFn.tvl;
+  const dir = sortDir === 'asc' ? 1 : -1;
+
+  filteredPools.sort((a, b) => {
+    const va = fn(a), vb = fn(b);
+    if (va < vb) return -1 * dir;
+    if (va > vb) return 1 * dir;
+    return 0;
+  });
+}
+
+function render() {
+  const tbody = document.getElementById('pool-tbody');
+  const start = currentPage * PAGE_SIZE;
+  const page = filteredPools.slice(start, start + PAGE_SIZE);
+
+  tbody.innerHTML = page.map(p => {
+    const u = fmtUsage(p.vol, p.tvl);
+    const balUrl = poolUrl(p);
+    const expUrl = explorerUrl(p);
+    const vBadge = p.protocolVersion === 3 ? 'badge-v3' : 'badge-v2';
+
+    return `<tr>
+      <td>
+        <div class="pool-name">
+          <span class="name" title="${esc(p.name)}">${esc(p.name)}</span>
+          <span class="tokens">${esc(p.tokenSymbols)}</span>
+          <span>
+            <a class="pool-link" href="${balUrl}" target="_blank">Balancer</a>
+            ${expUrl ? `&nbsp;·&nbsp;<a class="pool-link" href="${expUrl}" target="_blank">Explorer</a>` : ''}
+          </span>
+        </div>
+      </td>
+      <td class="hide-sm"><span class="badge badge-type">${p.type.replace(/_/g, ' ')}</span></td>
+      <td class="hide-sm"><span class="badge badge-chain">${(CHAIN_INFO[p.chain] && CHAIN_INFO[p.chain].name) || p.chain}</span></td>
+      <td class="hide-md"><span class="badge ${vBadge}">v${p.protocolVersion}</span></td>
+      <td class="hide-md">${p.hookType ? `<span class="badge badge-hook">${p.hookType.replace(/_/g, ' ')}</span>` : '<span style="color:var(--text-muted)">-</span>'}</td>
+      <td class="numeric">${fmt$(p.tvl)}</td>
+      <td class="numeric">${fmt$(p.vol)}</td>
+      <td class="numeric hide-md">${fmt$(p.swapFees24h)}</td>
+      <td class="numeric fee-pct hide-md">${fmtPct(p.swapFee)}</td>
+      <td class="numeric"><span class="${p.yieldApr > 0 ? 'usage-high' : 'usage-low'}">${fmtApr(p.yieldApr)}</span></td>
+      <td class="numeric hide-sm"><span class="${u.cls}">${u.text}</span></td>
+      <td class="numeric hide-md">${fmtNum(p.holders)}</td>
+    </tr>`;
+  }).join('');
+
+  // Update pagination
+  const totalPages = Math.ceil(filteredPools.length / PAGE_SIZE);
+  const pag = document.getElementById('pagination');
+  pag.style.display = totalPages > 1 ? 'flex' : 'none';
+  document.getElementById('page-info').textContent =
+    `Page ${currentPage + 1} of ${totalPages} (${filteredPools.length} pools)`;
+  document.getElementById('btn-prev').disabled = currentPage === 0;
+  document.getElementById('btn-next').disabled = currentPage >= totalPages - 1;
+
+  // Update header stats (totals update with every filter/search change)
+  const totalTvl = filteredPools.reduce((s, p) => s + p.tvl, 0);
+  const totalVol = filteredPools.reduce((s, p) => s + p.vol, 0);
+  const totalSwapFees = filteredPools.reduce((s, p) => s + p.swapFees24h, 0);
+  const totalYield = filteredPools.reduce((s, p) => s + p.yield24h, 0);
+  const totalSurplus = filteredPools.reduce((s, p) => s + p.surplus24h, 0);
+  document.getElementById('stat-pools').textContent = filteredPools.length.toLocaleString();
+  document.getElementById('stat-tvl').textContent = fmt$(totalTvl);
+  document.getElementById('stat-vol').textContent = fmt$(totalVol);
+  document.getElementById('stat-swap-fees').textContent = fmt$(totalSwapFees);
+  document.getElementById('stat-yield').textContent = fmt$(totalYield);
+  document.getElementById('stat-surplus').textContent = fmt$(totalSurplus);
+}
+
+function esc(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+// Sort header clicks
+document.querySelectorAll('thead th[data-sort]').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.sort;
+    if (sortKey === key) {
+      sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      sortKey = key;
+      sortDir = ['tvl', 'volume', 'fees', 'swapFee', 'yieldApr', 'usage', 'holders'].includes(key) ? 'desc' : 'asc';
+    }
+
+    // Update header UI
+    document.querySelectorAll('thead th').forEach(h => {
+      h.classList.remove('sorted');
+      h.querySelector('.sort-arrow').innerHTML = '&#9650;';
+    });
+    th.classList.add('sorted');
+    th.querySelector('.sort-arrow').innerHTML = sortDir === 'asc' ? '&#9650;' : '&#9660;';
+
+    applySorting();
+    currentPage = 0;
+    render();
+  });
+});
+
+// Filter listeners
+['search', 'filter-chain', 'filter-type', 'filter-version', 'filter-hook', 'filter-min-tvl'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', applyFilters);
+});
+
+// Pagination
+document.getElementById('btn-prev').addEventListener('click', () => {
+  if (currentPage > 0) { currentPage--; render(); }
+});
+document.getElementById('btn-next').addEventListener('click', () => {
+  const totalPages = Math.ceil(filteredPools.length / PAGE_SIZE);
+  if (currentPage < totalPages - 1) { currentPage++; render(); }
+});
+
+// Refresh
+document.getElementById('btn-refresh').addEventListener('click', loadData);
+
+// CSV export (exports currently filtered pools, respecting sort order)
+function csvEscape(val) {
+  if (val === null || val === undefined) return '';
+  const s = String(val);
+  if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+function exportCsv() {
+  if (!filteredPools.length) {
+    alert('No pools to export. Adjust your filters and try again.');
+    return;
+  }
+  const headers = [
+    'Pool Name', 'Tokens', 'Type', 'Chain', 'Version', 'Hook',
+    'Address', 'TVL (USD)', 'Volume 24h (USD)',
+    'Swap Fees 24h (USD)', 'Yield 24h (USD)', 'Surplus 24h (USD)', 'Total Yield 24h (USD)',
+    'Swap Fee (%)', 'Yield APR (%)', 'Total APR (%)',
+    'Usage (Vol/TVL %)', 'Holders', 'Balancer URL',
+  ];
+  const rows = filteredPools.map(p => [
+    p.name,
+    p.tokenSymbols,
+    p.type.replace(/_/g, ' '),
+    (CHAIN_INFO[p.chain] && CHAIN_INFO[p.chain].name) || p.chain,
+    'v' + p.protocolVersion,
+    p.hookType ? p.hookType.replace(/_/g, ' ') : '',
+    p.address,
+    p.tvl.toFixed(2),
+    p.vol.toFixed(2),
+    p.swapFees24h.toFixed(2),
+    p.yield24h.toFixed(2),
+    p.surplus24h.toFixed(2),
+    p.totalYield24h.toFixed(2),
+    (p.swapFee * 100).toFixed(4),
+    (p.yieldApr * 100).toFixed(4),
+    (p.totalApr * 100).toFixed(4),
+    p.tvl > 0 ? (p.usage * 100).toFixed(2) : '',
+    p.holders,
+    poolUrl(p),
+  ]);
+
+  const csv = [headers, ...rows]
+    .map(row => row.map(csvEscape).join(','))
+    .join('\n');
+
+  // Prepend BOM so Excel detects UTF-8 correctly
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  a.href = url;
+  a.download = `balancer-pools-${stamp}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('btn-export').addEventListener('click', exportCsv);
+
+async function loadData() {
+  const loading = document.getElementById('loading');
+  const table = document.getElementById('pool-table');
+  const error = document.getElementById('error');
+
+  loading.style.display = 'flex';
+  table.style.display = 'none';
+  error.style.display = 'none';
+
+  try {
+    const raw = await fetchPools();
+    allPools = raw
+      .filter(p => !HIDDEN_POOL_TYPES.has(p.type))
+      .map(processPool);
+    populateFilters();
+    applyFilters();
+
+    loading.style.display = 'none';
+    table.style.display = 'table';
+    document.getElementById('stat-time').textContent = new Date().toLocaleTimeString();
+  } catch (e) {
+    loading.style.display = 'none';
+    error.style.display = 'block';
+    error.textContent = 'Error loading pools: ' + e.message;
+    console.error(e);
+  }
+}
+
+// Initial load
+loadData();
+</script>
+</body>
+</html>
