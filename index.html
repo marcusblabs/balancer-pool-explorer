@@ -424,7 +424,7 @@
       <div class="stat-value" id="stat-surplus">-</div>
     </div>
     <div title="Total daily USD value of core BAL gauge emissions (veBAL-directed) across filtered pools">
-      <div>veBAL Em. /day</div>
+      <div>BAL Em. /day</div>
       <div class="stat-value" id="stat-vebal">-</div>
     </div>
     <div>
@@ -491,7 +491,7 @@
         <th data-sort="fees" class="numeric hide-md">Fees 24h <span class="sort-arrow">&#9650;</span></th>
         <th data-sort="swapFee" class="numeric hide-md">Swap Fee <span class="sort-arrow">&#9650;</span></th>
         <th data-sort="yieldApr" class="numeric" title="APR from token yield (rate-provider / IB_YIELD items)">Yield APR <span class="sort-arrow">&#9650;</span></th>
-        <th data-sort="vebal" class="numeric hide-md" title="Daily USD value of core BAL gauge emissions (VEBAL_EMISSIONS APR × TVL / 365)">veBAL Em. /day <span class="sort-arrow">&#9650;</span></th>
+        <th data-sort="vebal" class="numeric hide-md" title="Daily USD value of core BAL gauge emissions (VEBAL_EMISSIONS APR × TVL / 365)">BAL Em. /day <span class="sort-arrow">&#9650;</span></th>
         <th data-sort="usage" class="numeric hide-sm">Usage (Vol/TVL) <span class="sort-arrow">&#9650;</span></th>
         <th data-sort="holders" class="numeric hide-md">Holders <span class="sort-arrow">&#9650;</span></th>
       </tr>
@@ -929,7 +929,7 @@ function exportCsv() {
     'Address', 'TVL (USD)', 'Volume 24h (USD)',
     'Swap Fees 24h (USD)', 'Yield 24h (USD)', 'Surplus 24h (USD)', 'Total Yield 24h (USD)',
     'Swap Fee (%)', 'Yield APR (%)', 'Total APR (%)',
-    'veBAL Emissions/day (USD)',
+    'BAL Emissions/day (USD)',
     'Usage (Vol/TVL %)', 'Holders', 'Balancer URL',
   ];
   const rows = filteredPools.map(p => [
