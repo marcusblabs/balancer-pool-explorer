@@ -423,6 +423,10 @@
       <div>Surplus 24h</div>
       <div class="stat-value" id="stat-surplus">-</div>
     </div>
+    <div title="Total daily USD value of core BAL gauge emissions (veBAL-directed) across filtered pools">
+      <div>veBAL Em. /day</div>
+      <div class="stat-value" id="stat-vebal">-</div>
+    </div>
     <div>
       <div>Last Updated</div>
       <div class="stat-value" id="stat-time">-</div>
@@ -487,6 +491,7 @@
         <th data-sort="fees" class="numeric hide-md">Fees 24h <span class="sort-arrow">&#9650;</span></th>
         <th data-sort="swapFee" class="numeric hide-md">Swap Fee <span class="sort-arrow">&#9650;</span></th>
         <th data-sort="yieldApr" class="numeric" title="APR from token yield (rate-provider / IB_YIELD items)">Yield APR <span class="sort-arrow">&#9650;</span></th>
+        <th data-sort="vebal" class="numeric hide-md" title="Daily USD value of core BAL gauge emissions (VEBAL_EMISSIONS APR × TVL / 365)">veBAL Em. /day <span class="sort-arrow">&#9650;</span></th>
         <th data-sort="usage" class="numeric hide-sm">Usage (Vol/TVL) <span class="sort-arrow">&#9650;</span></th>
         <th data-sort="holders" class="numeric hide-md">Holders <span class="sort-arrow">&#9650;</span></th>
       </tr>
@@ -691,6 +696,12 @@ function processPool(p) {
   const yield24h = parseFloat(d.yieldCapture24h) || 0;
   const surplus24h = parseFloat(d.surplus24h) || 0;
 
+  // veBAL emissions: daily USD value of core BAL gauge incentives
+  const vebalApr = aprItems
+    .filter(i => i.type === 'VEBAL_EMISSIONS')
+    .reduce((sum, item) => sum + (parseFloat(item.apr) || 0), 0);
+  const vebalEmissionsDaily = tvl > 0 ? vebalApr * tvl / 365 : 0;
+
   return {
     ...p,
     tvl,
@@ -705,6 +716,7 @@ function processPool(p) {
     holders: parseInt(d.holdersCount) || 0,
     totalApr,
     yieldApr,
+    vebalEmissionsDaily,
     hookType: p.hook ? p.hook.type : null,
     tokenSymbols: p.poolTokens.map(t => t.symbol).join(' / '),
     searchText: [
@@ -772,6 +784,7 @@ function applySorting() {
     fees: p => p.swapFees24h,
     swapFee: p => p.swapFee,
     yieldApr: p => p.yieldApr,
+    vebal: p => p.vebalEmissionsDaily,
     usage: p => p.usage,
     holders: p => p.holders,
   };
@@ -818,6 +831,7 @@ function render() {
       <td class="numeric hide-md">${fmt$(p.swapFees24h)}</td>
       <td class="numeric fee-pct hide-md">${fmtPct(p.swapFee)}</td>
       <td class="numeric"><span class="${p.yieldApr > 0 ? 'usage-high' : 'usage-low'}">${fmtApr(p.yieldApr)}</span></td>
+      <td class="numeric hide-md"><span class="${p.vebalEmissionsDaily > 0 ? 'usage-high' : 'usage-low'}">${p.vebalEmissionsDaily > 0 ? fmt$(p.vebalEmissionsDaily) : '-'}</span></td>
       <td class="numeric hide-sm"><span class="${u.cls}">${u.text}</span></td>
       <td class="numeric hide-md">${fmtNum(p.holders)}</td>
     </tr>`;
@@ -838,12 +852,14 @@ function render() {
   const totalSwapFees = filteredPools.reduce((s, p) => s + p.swapFees24h, 0);
   const totalYield = filteredPools.reduce((s, p) => s + p.yield24h, 0);
   const totalSurplus = filteredPools.reduce((s, p) => s + p.surplus24h, 0);
+  const totalVebal = filteredPools.reduce((s, p) => s + p.vebalEmissionsDaily, 0);
   document.getElementById('stat-pools').textContent = filteredPools.length.toLocaleString();
   document.getElementById('stat-tvl').textContent = fmt$(totalTvl);
   document.getElementById('stat-vol').textContent = fmt$(totalVol);
   document.getElementById('stat-swap-fees').textContent = fmt$(totalSwapFees);
   document.getElementById('stat-yield').textContent = fmt$(totalYield);
   document.getElementById('stat-surplus').textContent = fmt$(totalSurplus);
+  document.getElementById('stat-vebal').textContent = fmt$(totalVebal);
 }
 
 function esc(str) {
@@ -860,7 +876,7 @@ document.querySelectorAll('thead th[data-sort]').forEach(th => {
       sortDir = sortDir === 'asc' ? 'desc' : 'asc';
     } else {
       sortKey = key;
-      sortDir = ['tvl', 'volume', 'fees', 'swapFee', 'yieldApr', 'usage', 'holders'].includes(key) ? 'desc' : 'asc';
+      sortDir = ['tvl', 'volume', 'fees', 'swapFee', 'yieldApr', 'vebal', 'usage', 'holders'].includes(key) ? 'desc' : 'asc';
     }
 
     // Update header UI
@@ -913,6 +929,7 @@ function exportCsv() {
     'Address', 'TVL (USD)', 'Volume 24h (USD)',
     'Swap Fees 24h (USD)', 'Yield 24h (USD)', 'Surplus 24h (USD)', 'Total Yield 24h (USD)',
     'Swap Fee (%)', 'Yield APR (%)', 'Total APR (%)',
+    'veBAL Emissions/day (USD)',
     'Usage (Vol/TVL %)', 'Holders', 'Balancer URL',
   ];
   const rows = filteredPools.map(p => [
@@ -932,6 +949,7 @@ function exportCsv() {
     (p.swapFee * 100).toFixed(4),
     (p.yieldApr * 100).toFixed(4),
     (p.totalApr * 100).toFixed(4),
+    p.vebalEmissionsDaily.toFixed(2),
     p.tvl > 0 ? (p.usage * 100).toFixed(2) : '',
     p.holders,
     poolUrl(p),
