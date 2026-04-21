@@ -5,495 +5,421 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<title>Balancer Pool Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Balancer Pool Explorer</title>
 <style>
   :root {
-    /* Balancer / Defilytica-inspired warm palette */
-    --bg-primary: #1A202C;
-    --bg-secondary: #171923;
-    --bg-tertiary: #2D3748;
-    --bg-hover: #2D3748;
-    --bg-card: #1A202C;
-    --text-primary: #F7FAFC;
-    --text-secondary: #A0AEC0;
-    --text-muted: #718096;
-    --accent: #B68449;
-    --accent-light: #E6C6A0;
-    --accent-hover: #92693A;
-    --green: #00d395;
-    --green-dim: rgba(0, 211, 149, 0.12);
-    --red: #ea6249;
-    --red-dim: rgba(234, 98, 73, 0.12);
-    --yellow: #EA9A43;
-    --yellow-dim: rgba(234, 154, 67, 0.12);
-    --blue: #457dff;
-    --blue-dim: rgba(69, 125, 255, 0.12);
-    --purple: #7f6ae8;
-    --purple-dim: rgba(127, 106, 232, 0.10);
-    --sand: #E5D3BE;
-    --sand-dim: rgba(229, 211, 190, 0.10);
-    --brown: #B68449;
-    --border: rgba(255, 255, 255, 0.06);
-    --border-strong: rgba(255, 255, 255, 0.10);
-    --radius: 8px;
-    --radius-sm: 6px;
+    /* Terminal Classic — amber phosphor on black */
+    --bg:          #0a0a0a;
+    --bg-alt:      #141414;
+    --bg-row:      #0f0f0f;
+    --bg-hover:    #1a1408;
+    --border:      #2a2408;
+    --border-strong: #3d330a;
+    --fg:          #e6c77a;
+    --fg-dim:      #8b7532;
+    --fg-mute:     #574829;
+    --accent:      #ffbf00;
+    --pos:         #6cff6c;
+    --neg:         #ff5a5a;
+    --cyan:        #7bdcff;
+    --magenta:     #ff7bd8;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
+  html, body { background: var(--bg); }
+
   body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: var(--bg-primary);
-    color: var(--text-primary);
+    font-family: 'IBM Plex Mono', 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+    color: var(--fg);
     min-height: 100vh;
+    font-size: 12px;
+    line-height: 1.35;
+    font-feature-settings: "tnum" 1, "zero" 1;
+    position: relative;
   }
 
-  .header {
-    padding: 24px 32px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 16px;
-    background: var(--bg-secondary);
+  /* CRT scanline overlay */
+  body::after {
+    content: '';
+    position: fixed; inset: 0; pointer-events: none;
+    background-image: repeating-linear-gradient(0deg,
+      rgba(255,191,0,0.025) 0px, rgba(255,191,0,0.025) 1px,
+      transparent 1px, transparent 3px);
+    mix-blend-mode: overlay;
+    z-index: 100;
   }
 
-  .header h1 {
-    font-size: 22px;
-    font-weight: 600;
-    color: var(--text-primary);
-    letter-spacing: -0.3px;
-  }
+  a { color: inherit; text-decoration: none; }
 
-  .header-stats {
-    display: flex;
-    gap: 28px;
+  /* Top bar */
+  .topbar {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 16px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border-strong);
+    background: var(--bg-alt);
     font-size: 11px;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
   }
-
-  .header-stats .stat-value {
-    font-weight: 600;
-    color: var(--text-primary);
-    font-size: 14px;
-    margin-top: 2px;
-    text-transform: none;
-    letter-spacing: 0;
+  .topbar .brand { color: var(--accent); font-weight: 700; letter-spacing: 1px; }
+  .topbar .sub { color: var(--fg-mute); }
+  .topbar .right { margin-left: auto; display: flex; gap: 16px; align-items: center; }
+  .topbar .count { color: var(--fg-dim); }
+  .topbar .status {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: var(--pos);
   }
+  .topbar .status .dot {
+    width: 6px; height: 6px; background: var(--pos);
+  }
+  .topbar.loading .status { color: var(--accent); }
+  .topbar.loading .status .dot { background: var(--accent); animation: blink 1s step-start infinite; }
+  .topbar .time { color: var(--fg-mute); }
+  @keyframes blink { 50% { opacity: 0; } }
 
-  .controls {
-    padding: 14px 32px;
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    align-items: center;
+  /* KPI strip */
+  .kpi-strip {
+    display: grid; grid-template-columns: repeat(7, 1fr);
     border-bottom: 1px solid var(--border);
-    background: var(--bg-card);
+    background: var(--bg);
+  }
+  .kpi-strip .kpi {
+    padding: 10px 14px;
+    border-right: 1px solid var(--border);
+  }
+  .kpi-strip .kpi:last-child { border-right: none; }
+  .kpi-strip .kpi .label {
+    font-size: 10px; color: var(--fg-mute); letter-spacing: 1px;
+    text-transform: uppercase; font-weight: 600;
+  }
+  .kpi-strip .kpi .val {
+    font-size: 16px; color: var(--accent); font-weight: 600; margin-top: 2px;
+  }
+  .kpi-strip .kpi[title] { cursor: help; }
+
+  /* Controls row */
+  .controls {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
   }
 
-  .search-box {
-    flex: 1;
-    min-width: 200px;
-    max-width: 360px;
-    padding: 8px 12px;
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius-sm);
-    color: var(--text-primary);
-    font-size: 13px;
-    outline: none;
-    transition: border-color 0.2s;
+  /* Terminal select/input */
+  .t-field {
+    display: inline-flex; align-items: center;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    height: 24px; overflow: hidden;
+    font-size: 11px;
   }
-
-  .search-box:focus { border-color: var(--accent); }
-  .search-box::placeholder { color: var(--text-muted); }
-
-  select, .btn {
-    padding: 8px 12px;
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius-sm);
-    color: var(--text-secondary);
-    font-size: 13px;
-    cursor: pointer;
-    outline: none;
-    transition: border-color 0.2s, background 0.2s;
+  .t-field .t-label {
+    padding: 0 8px; height: 100%;
+    background: var(--bg-alt); color: var(--fg-mute);
+    display: flex; align-items: center;
+    border-right: 1px solid var(--border);
+    letter-spacing: 0.5px; font-size: 10px;
+    white-space: nowrap;
   }
-
-  select:hover, .btn:hover { border-color: var(--accent); background: var(--bg-hover); color: var(--text-primary); }
-
-  select option { background: var(--bg-secondary); color: var(--text-primary); }
-
-  .btn-accent {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
-    font-weight: 600;
+  .t-field input, .t-field select {
+    background: transparent; color: var(--fg);
+    border: none; outline: none; padding: 0 8px;
+    font-family: inherit; font-size: 11px;
+    height: 100%;
   }
+  .t-field select { cursor: pointer; padding-right: 4px; }
+  .t-field select option { background: var(--bg); color: var(--fg); }
+  .t-field input::placeholder { color: var(--fg-mute); }
+  .t-field.search input { min-width: 180px; }
+  .t-field.search .t-label { color: var(--accent); }
 
-  .btn-accent:hover { background: var(--accent-hover); }
+  .btn {
+    background: transparent; color: var(--fg); border: 1px solid var(--border);
+    padding: 0 10px; height: 24px;
+    font-family: inherit; font-size: 10px; letter-spacing: 0.5px;
+    cursor: pointer; text-transform: uppercase;
+  }
+  .btn:hover { background: var(--bg-hover); border-color: var(--fg-dim); color: var(--accent); }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn.accent { border-color: var(--accent); color: var(--accent); }
+  .btn.accent:hover { background: var(--accent); color: var(--bg); }
 
-  .btn-sm { padding: 4px 10px; font-size: 12px; }
-
-  .table-container {
+  /* Table */
+  .table-wrap {
     overflow-x: auto;
-    padding: 0 16px 32px;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* Subtle right-edge scroll hint */
+  .table-wrap {
+    background:
+      linear-gradient(to right, var(--bg) 30%, rgba(10,10,10,0)) left center / 20px 100% no-repeat,
+      linear-gradient(to right, rgba(10,10,10,0), var(--bg) 70%) right center / 20px 100% no-repeat,
+      linear-gradient(to right, rgba(255,191,0,0.04), rgba(10,10,10,0)) left center / 8px 100% no-repeat,
+      linear-gradient(to left, rgba(255,191,0,0.04), rgba(10,10,10,0)) right center / 8px 100% no-repeat;
+    background-attachment: local, local, scroll, scroll;
   }
 
   table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-    min-width: 1200px;
+    width: 100%; border-collapse: collapse;
+    font-size: 12px;
+    min-width: 1400px;
   }
 
   thead th {
-    position: sticky;
-    top: 0;
-    background: var(--bg-card);
-    padding: 11px 14px;
+    position: sticky; top: 0; z-index: 2;
+    background: var(--bg-alt);
+    padding: 8px 10px;
     text-align: left;
-    font-weight: 500;
-    color: var(--text-muted);
-    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    font-size: 10px;
     text-transform: uppercase;
-    letter-spacing: 0.6px;
+    letter-spacing: 0.5px;
     border-bottom: 1px solid var(--border-strong);
+    border-right: 1px solid var(--border);
     cursor: pointer;
     user-select: none;
     white-space: nowrap;
-    transition: color 0.2s;
   }
-
-  thead th:hover { color: var(--text-primary); }
-  thead th.sorted { color: var(--sand); }
-
+  thead th:last-child { border-right: none; }
+  thead th:hover { background: var(--bg-hover); }
+  thead th.numeric { text-align: right; }
+  thead th.center { text-align: center; }
   thead th .sort-arrow {
-    display: inline-block;
-    margin-left: 4px;
-    font-size: 10px;
-    opacity: 0.3;
+    display: inline-block; margin-left: 4px;
+    font-size: 10px; color: var(--fg-mute);
   }
-
-  thead th.sorted .sort-arrow { opacity: 1; }
+  thead th.sorted .sort-arrow { color: var(--accent); }
 
   tbody tr {
     border-bottom: 1px solid var(--border);
-    transition: background 0.15s;
+    transition: background 0.1s;
   }
-
-  tbody tr:hover { background: var(--bg-hover); }
+  tbody tr:nth-child(even) { background: var(--bg-row); }
+  tbody tr:hover { background: var(--bg-alt); cursor: pointer; }
 
   tbody td {
-    padding: 10px 14px;
+    padding: 6px 10px;
     white-space: nowrap;
     vertical-align: middle;
-    color: var(--text-secondary);
+    color: var(--fg);
+    border-right: 1px solid var(--border);
   }
-
-  .pool-name {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    max-width: 280px;
-  }
-
-  .pool-name .name {
-    font-weight: 500;
-    color: var(--text-primary);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .pool-name .tokens {
-    font-size: 11px;
-    color: var(--text-muted);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .pool-link {
-    color: var(--text-muted);
-    text-decoration: none;
-    font-size: 11px;
-    transition: color 0.15s;
-  }
-
-  .pool-link:hover { color: var(--sand); text-decoration: none; }
-
-  .badge {
-    display: inline-block;
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-size: 10px;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-  }
-
-  .badge-type {
-    background: var(--sand-dim);
-    color: var(--accent-light);
-  }
-
-  .badge-chain {
-    background: var(--blue-dim);
-    color: var(--blue);
-  }
-
-  .badge-hook {
-    background: var(--purple-dim);
-    color: var(--purple);
-  }
-
-  .badge-v2 {
-    background: rgba(255, 255, 255, 0.04);
-    color: var(--text-muted);
-  }
-
-  .badge-v3 {
-    background: var(--green-dim);
-    color: var(--green);
-  }
+  tbody td:last-child { border-right: none; }
 
   .numeric { text-align: right; font-variant-numeric: tabular-nums; }
+  .center { text-align: center; }
 
-  .usage-high { color: var(--green); font-weight: 500; }
-  .usage-medium { color: var(--accent-light); }
-  .usage-low { color: var(--text-muted); }
-
-  .loading {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 80px 20px;
-    color: var(--text-secondary);
-    font-size: 14px;
+  /* Pool name cell — stacked */
+  .pool-cell {
+    display: flex; flex-direction: column; gap: 1px;
+    line-height: 1.15;
+    min-width: 0;
   }
-
-  .spinner {
-    width: 20px;
-    height: 20px;
-    border: 2px solid var(--border-strong);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin-right: 12px;
+  .pool-cell .tokens {
+    color: var(--cyan);
+    font-size: 9px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-weight: 500;
+    opacity: 0.9;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    max-width: 340px;
   }
-
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  .pagination {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    padding: 16px;
-    color: var(--text-secondary);
-    font-size: 13px;
-    background: var(--bg-secondary);
-    border-top: 1px solid var(--border);
+  .pool-cell .name {
+    color: var(--fg);
+    font-weight: 600;
+    font-size: 12px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    max-width: 340px;
   }
+  .pool-cell .links {
+    font-size: 9px;
+    color: var(--fg-mute);
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+  }
+  .pool-cell .links a:hover { color: var(--accent); }
 
-  .error {
-    padding: 40px;
+  /* Badges / cells */
+  .type { color: var(--fg-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .chain { font-weight: 600; font-size: 11px; letter-spacing: 0.3px; }
+  .ver { color: var(--fg-dim); }
+  .ver.v3 { color: var(--accent); font-weight: 600; }
+  .hook { color: var(--magenta); font-size: 9px; letter-spacing: 0.3px; }
+  .hook.none { color: var(--fg-mute); }
+  .fee-pct { color: var(--fg-dim); }
+  .apr-pos { color: var(--pos); font-weight: 600; }
+  .apr-accent { color: var(--accent); font-weight: 600; }
+  .muted { color: var(--fg-mute); }
+
+  .usage-high { color: var(--pos); font-weight: 600; }
+  .usage-medium { color: var(--fg); font-weight: 500; }
+  .usage-low { color: var(--fg-dim); }
+
+  /* Loading / error */
+  .loading, .error, .empty {
+    padding: 40px 20px;
     text-align: center;
-    color: var(--red);
+    color: var(--fg-dim);
+    font-size: 12px;
+    border-bottom: 1px solid var(--border);
   }
+  .loading .cursor { color: var(--accent); animation: blink 0.8s step-start infinite; }
+  .error { color: var(--neg); }
 
-  .fee-pct { color: var(--accent-light); }
-
-  .pool-address {
-    font-family: 'SF Mono', 'Fira Code', monospace;
-    font-size: 11px;
-    color: var(--text-muted);
+  /* Pagination + status footer */
+  .pagination {
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    padding: 10px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+    font-size: 11px; color: var(--fg-dim);
   }
+  .pagination .page-info { color: var(--fg); }
 
-  /* Subtle gradient overlay on page */
-  body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 400px;
-    background: radial-gradient(ellipse at 50% 0%, rgba(182, 132, 73, 0.04) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 0;
+  .footer {
+    padding: 8px 16px;
+    border-top: 1px solid var(--border-strong);
+    background: var(--bg-alt);
+    font-size: 10px; color: var(--fg-mute);
+    display: flex; gap: 20px; flex-wrap: wrap;
   }
-
-  .header, .controls, .table-container, .pagination { position: relative; z-index: 1; }
+  .footer .right { margin-left: auto; }
+  .footer .right b { color: var(--accent); font-weight: 500; }
 
   /* ---------- Responsive: tablet ---------- */
   @media (max-width: 900px) {
-    .header {
-      padding: 14px 16px;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 14px;
+    .topbar { padding: 8px 12px; gap: 10px; }
+    .topbar .sub, .topbar .time { display: none; }
+    .kpi-strip { grid-template-columns: repeat(4, 1fr); }
+    .kpi-strip .kpi:nth-child(4n) { border-right: none; }
+    .kpi-strip .kpi:nth-child(-n+4) { border-bottom: 1px solid var(--border); }
+    .kpi-strip .kpi {
+      padding: 8px 10px;
     }
-    .header h1 { font-size: 18px; }
-    .header-stats {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-      gap: 14px 16px;
-      width: 100%;
-    }
-    .header-stats .stat-value { font-size: 15px; }
-    .controls {
-      padding: 10px 16px;
-      gap: 8px;
-    }
-    .search-box {
-      max-width: none;
-      flex: 1 1 100%;
-      padding: 10px 12px;
-      font-size: 14px;
-    }
-    select, .btn {
-      flex: 1 1 calc(50% - 4px);
-      min-width: 0;
-      padding: 10px 12px;
-      font-size: 13px;
-    }
-    table { min-width: auto; }
-    .table-container { padding: 0 8px 24px; }
-    .pool-name { max-width: none; }
-    /* Columns hidden at tablet width and below */
-    th.hide-md, td.hide-md { display: none !important; }
+    .kpi-strip .kpi .val { font-size: 14px; }
+    .controls { padding: 8px 12px; }
+    .footer { padding: 8px 12px; gap: 12px; }
+    .footer .hide-sm { display: none; }
   }
 
   /* ---------- Responsive: phone ---------- */
   @media (max-width: 480px) {
-    .header-stats {
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px 14px;
-    }
-    .header-stats > div { font-size: 10px; }
-    .header-stats .stat-value { font-size: 14px; }
-    thead th {
-      padding: 8px 8px;
-      font-size: 10px;
-      letter-spacing: 0.3px;
-    }
-    tbody td {
-      padding: 9px 8px;
-      font-size: 12px;
-    }
-    .pool-name .name { font-size: 12px; }
-    .pool-name .tokens { font-size: 10px; }
-    .badge { padding: 2px 6px; font-size: 9px; }
-    /* Columns hidden on phones only (visible on tablets) */
-    th.hide-sm, td.hide-sm { display: none !important; }
+    .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+    .kpi-strip .kpi { padding: 7px 9px; }
+    .kpi-strip .kpi:nth-child(4n) { border-right: 1px solid var(--border); }
+    .kpi-strip .kpi:nth-child(2n) { border-right: none; }
+    .kpi-strip .kpi:not(:nth-last-child(-n+2)) { border-bottom: 1px solid var(--border); }
+    .kpi-strip .kpi .val { font-size: 13px; }
+    .kpi-strip .kpi .label { font-size: 9px; }
+    .topbar .brand { font-size: 10px; }
+    /* Make t-fields wrap nicely without squishing */
+    .t-field.search { flex: 1 1 100%; }
+    .t-field.search input { min-width: 0; width: 100%; }
+    .t-field:not(.search) { flex: 1 1 calc(50% - 4px); }
+    .t-field:not(.search) select { flex: 1; }
+    .btn { flex: 1 1 calc(50% - 4px); }
+    thead th { padding: 7px 8px; font-size: 9px; }
+    tbody td { padding: 7px 8px; font-size: 11px; }
+    .pool-cell .name { font-size: 11px; max-width: 240px; }
+    .pool-cell .tokens { font-size: 9px; max-width: 240px; }
   }
 </style>
 </head>
 <body>
 
-<div class="header">
-  <h1>Balancer Pool Explorer</h1>
-  <div class="header-stats">
-    <div>
-      <div>Total Pools</div>
-      <div class="stat-value" id="stat-pools">-</div>
-    </div>
-    <div>
-      <div>Total TVL</div>
-      <div class="stat-value" id="stat-tvl">-</div>
-    </div>
-    <div>
-      <div>Total Vol 24h</div>
-      <div class="stat-value" id="stat-vol">-</div>
-    </div>
-    <div title="Swap fees collected across the filtered pools in the last 24h">
-      <div>Swap Fees 24h</div>
-      <div class="stat-value" id="stat-swap-fees">-</div>
-    </div>
-    <div title="Yield captured from rate-provider / yield-bearing tokens in the last 24h">
-      <div>Yield 24h</div>
-      <div class="stat-value" id="stat-yield">-</div>
-    </div>
-    <div title="Surplus from CoW AMM hooks / MEV capture in the last 24h">
-      <div>Surplus 24h</div>
-      <div class="stat-value" id="stat-surplus">-</div>
-    </div>
-    <div title="Total daily USD value of core BAL gauge emissions (veBAL-directed) across filtered pools">
-      <div>BAL Em. /day</div>
-      <div class="stat-value" id="stat-vebal">-</div>
-    </div>
-    <div>
-      <div>Last Updated</div>
-      <div class="stat-value" id="stat-time">-</div>
-    </div>
+<div class="topbar" id="topbar">
+  <div class="brand">BALANCER▚POOL▚EXPLORER</div>
+  <div class="sub">v1.0 // api-v3.balancer.fi</div>
+  <div class="right">
+    <span class="count" id="topbar-count">[—]</span>
+    <span class="status" id="topbar-status"><span class="dot"></span><span id="topbar-status-text">LIVE</span></span>
+    <span class="time" id="topbar-time">—</span>
   </div>
+</div>
+
+<div class="kpi-strip">
+  <div class="kpi"><div class="label">Pools</div><div class="val" id="stat-pools">—</div></div>
+  <div class="kpi"><div class="label">Total TVL</div><div class="val" id="stat-tvl">—</div></div>
+  <div class="kpi"><div class="label">Vol 24h</div><div class="val" id="stat-vol">—</div></div>
+  <div class="kpi" title="Swap fees collected across the filtered pools in the last 24h"><div class="label">Swap Fees 24h</div><div class="val" id="stat-swap-fees">—</div></div>
+  <div class="kpi" title="Yield captured from rate-provider / yield-bearing tokens in the last 24h"><div class="label">Yield 24h</div><div class="val" id="stat-yield">—</div></div>
+  <div class="kpi" title="Total daily USD value of core BAL gauge emissions (veBAL-directed) across filtered pools"><div class="label">BAL Em. /day</div><div class="val" id="stat-vebal">—</div></div>
+  <div class="kpi"><div class="label">Updated</div><div class="val" id="stat-time">—</div></div>
 </div>
 
 <div class="controls">
-  <input type="text" class="search-box" id="search" placeholder="Search pools, tokens, addresses...">
+  <label class="t-field search">
+    <span class="t-label">&gt;</span>
+    <input type="text" id="search" placeholder="search pool / token / address…">
+  </label>
 
-  <select id="filter-chain">
-    <option value="">All Chains</option>
-  </select>
+  <label class="t-field">
+    <span class="t-label">CHN</span>
+    <select id="filter-chain"><option value="">ALL</option></select>
+  </label>
 
-  <select id="filter-type">
-    <option value="">All Types</option>
-  </select>
+  <label class="t-field">
+    <span class="t-label">TYPE</span>
+    <select id="filter-type"><option value="">ALL</option></select>
+  </label>
 
-  <select id="filter-version">
-    <option value="">All Versions</option>
-    <option value="2">v2</option>
-    <option value="3">v3</option>
-  </select>
+  <label class="t-field">
+    <span class="t-label">VER</span>
+    <select id="filter-version">
+      <option value="">ALL</option>
+      <option value="2">v2</option>
+      <option value="3">v3</option>
+    </select>
+  </label>
 
-  <select id="filter-hook">
-    <option value="">All Hooks</option>
-    <option value="yes">Has Hook</option>
-    <option value="no">No Hook</option>
-  </select>
+  <label class="t-field">
+    <span class="t-label">HOOK</span>
+    <select id="filter-hook">
+      <option value="">ANY</option>
+      <option value="yes">YES</option>
+      <option value="no">NO</option>
+    </select>
+  </label>
 
-  <select id="filter-min-tvl">
-    <option value="0">Min TVL: Any</option>
-    <option value="1000">Min TVL: $1K</option>
-    <option value="10000" selected>Min TVL: $10K</option>
-    <option value="100000">Min TVL: $100K</option>
-    <option value="1000000">Min TVL: $1M</option>
-    <option value="10000000">Min TVL: $10M</option>
-  </select>
+  <label class="t-field">
+    <span class="t-label">MIN-TVL</span>
+    <select id="filter-min-tvl">
+      <option value="0">ANY</option>
+      <option value="1000">$1K</option>
+      <option value="10000" selected>$10K</option>
+      <option value="100000">$100K</option>
+      <option value="1000000">$1M</option>
+      <option value="10000000">$10M</option>
+    </select>
+  </label>
 
-  <button class="btn btn-accent" id="btn-refresh">Refresh</button>
-  <button class="btn" id="btn-export" title="Download the currently filtered pools as CSV">Download CSV</button>
+  <button class="btn accent" id="btn-refresh">[ REFRESH ]</button>
+  <button class="btn" id="btn-export" title="Download the currently filtered pools as CSV">[ CSV ]</button>
 </div>
 
-<div class="table-container">
-  <div class="loading" id="loading">
-    <div class="spinner"></div>
-    Loading pools from Balancer API...
-  </div>
-
+<div class="table-wrap">
+  <div class="loading" id="loading">&gt; FETCHING POOLS <span class="cursor">█</span></div>
   <div class="error" id="error" style="display:none"></div>
 
   <table id="pool-table" style="display:none">
     <thead>
       <tr>
-        <th data-sort="name">Pool <span class="sort-arrow">&#9650;</span></th>
-        <th data-sort="type" class="hide-sm">Type <span class="sort-arrow">&#9650;</span></th>
-        <th data-sort="chain" class="hide-sm">Chain <span class="sort-arrow">&#9650;</span></th>
-        <th data-sort="version" class="hide-md">Ver <span class="sort-arrow">&#9650;</span></th>
-        <th data-sort="hook" class="hide-md">Hook <span class="sort-arrow">&#9650;</span></th>
-        <th data-sort="tvl" class="numeric sorted">TVL <span class="sort-arrow">&#9660;</span></th>
-        <th data-sort="volume" class="numeric">Vol 24h <span class="sort-arrow">&#9650;</span></th>
-        <th data-sort="fees" class="numeric hide-md">Fees 24h <span class="sort-arrow">&#9650;</span></th>
-        <th data-sort="swapFee" class="numeric hide-md">Swap Fee <span class="sort-arrow">&#9650;</span></th>
-        <th data-sort="yieldApr" class="numeric" title="APR from token yield (rate-provider / IB_YIELD items)">Yield APR <span class="sort-arrow">&#9650;</span></th>
-        <th data-sort="vebal" class="numeric hide-md" title="Daily USD value of core BAL gauge emissions (VEBAL_EMISSIONS APR × TVL / 365)">BAL Em. /day <span class="sort-arrow">&#9650;</span></th>
-        <th data-sort="usage" class="numeric hide-sm">Usage (Vol/TVL) <span class="sort-arrow">&#9650;</span></th>
-        <th data-sort="holders" class="numeric hide-md">Holders <span class="sort-arrow">&#9650;</span></th>
+        <th data-sort="name">Pool <span class="sort-arrow">·</span></th>
+        <th data-sort="type">Type <span class="sort-arrow">·</span></th>
+        <th data-sort="chain">Chain <span class="sort-arrow">·</span></th>
+        <th data-sort="version" class="center">Ver <span class="sort-arrow">·</span></th>
+        <th data-sort="hook" class="center">Hook <span class="sort-arrow">·</span></th>
+        <th data-sort="tvl" class="numeric sorted">TVL <span class="sort-arrow">▼</span></th>
+        <th data-sort="volume" class="numeric">Vol 24h <span class="sort-arrow">·</span></th>
+        <th data-sort="fees" class="numeric">Fees 24h <span class="sort-arrow">·</span></th>
+        <th data-sort="swapFee" class="numeric">Swap Fee <span class="sort-arrow">·</span></th>
+        <th data-sort="yieldApr" class="numeric" title="APR from token yield (rate-provider / IB_YIELD items)">Yield APR <span class="sort-arrow">·</span></th>
+        <th data-sort="yieldDaily" class="numeric" title="Daily USD yield generated by the pool (Yield APR × TVL / 365)">Yield/day <span class="sort-arrow">·</span></th>
+        <th data-sort="vebal" class="numeric" title="Daily USD value of core BAL gauge emissions (VEBAL_EMISSIONS APR × TVL / 365)">BAL Em./day <span class="sort-arrow">·</span></th>
+        <th data-sort="usage" class="numeric">Usage (V/T) <span class="sort-arrow">·</span></th>
+        <th data-sort="holders" class="numeric">Holders <span class="sort-arrow">·</span></th>
       </tr>
     </thead>
     <tbody id="pool-tbody"></tbody>
@@ -501,9 +427,18 @@
 </div>
 
 <div class="pagination" id="pagination" style="display:none">
-  <button class="btn btn-sm" id="btn-prev">Prev</button>
-  <span id="page-info"></span>
-  <button class="btn btn-sm" id="btn-next">Next</button>
+  <button class="btn" id="btn-prev">[ PREV ]</button>
+  <span class="page-info" id="page-info"></span>
+  <button class="btn" id="btn-next">[ NEXT ]</button>
+</div>
+
+<div class="footer">
+  <span class="hide-sm">[/] search</span>
+  <span class="hide-sm">[R] refresh</span>
+  <span class="hide-sm">[C] csv</span>
+  <span class="right">
+    sort: <b id="footer-sort">tvl desc</b> · rows: <b id="footer-rows">0</b>
+  </span>
 </div>
 
 <script>
@@ -532,66 +467,68 @@ const HIDDEN_POOL_TYPES = new Set([
 
 // Chain display names and explorer URLs
 const CHAIN_INFO = {
-  MAINNET: { name: 'Ethereum', explorer: 'https://etherscan.io/address/' },
-  ARBITRUM: { name: 'Arbitrum', explorer: 'https://arbiscan.io/address/' },
-  OPTIMISM: { name: 'Optimism', explorer: 'https://optimistic.etherscan.io/address/' },
-  POLYGON: { name: 'Polygon', explorer: 'https://polygonscan.com/address/' },
-  BASE: { name: 'Base', explorer: 'https://basescan.org/address/' },
-  GNOSIS: { name: 'Gnosis', explorer: 'https://gnosisscan.io/address/' },
-  AVALANCHE: { name: 'Avalanche', explorer: 'https://snowtrace.io/address/' },
-  SONIC: { name: 'Sonic', explorer: 'https://sonicscan.org/address/' },
-  FRAXTAL: { name: 'Fraxtal', explorer: 'https://fraxscan.com/address/' },
-  MODE: { name: 'Mode', explorer: 'https://modescan.io/address/' },
-  FANTOM: { name: 'Fantom', explorer: 'https://ftmscan.com/address/' },
-  ZKEVM: { name: 'zkEVM', explorer: 'https://zkevm.polygonscan.com/address/' },
-  XLAYER: { name: 'X Layer', explorer: 'https://www.okx.com/web3/explorer/xlayer/address/' },
-  PLASMA: { name: 'Plasma', explorer: '' },
-  HYPEREVM: { name: 'HyperEVM', explorer: '' },
-  MONAD: { name: 'Monad', explorer: '' },
-  SEPOLIA: { name: 'Sepolia', explorer: 'https://sepolia.etherscan.io/address/' },
+  MAINNET:   { name: 'Ethereum',  short: 'ETH',  explorer: 'https://etherscan.io/address/' },
+  ARBITRUM:  { name: 'Arbitrum',  short: 'ARB',  explorer: 'https://arbiscan.io/address/' },
+  OPTIMISM:  { name: 'Optimism',  short: 'OP',   explorer: 'https://optimistic.etherscan.io/address/' },
+  POLYGON:   { name: 'Polygon',   short: 'POLY', explorer: 'https://polygonscan.com/address/' },
+  BASE:      { name: 'Base',      short: 'BASE', explorer: 'https://basescan.org/address/' },
+  GNOSIS:    { name: 'Gnosis',    short: 'GNO',  explorer: 'https://gnosisscan.io/address/' },
+  AVALANCHE: { name: 'Avalanche', short: 'AVAX', explorer: 'https://snowtrace.io/address/' },
+  SONIC:     { name: 'Sonic',     short: 'SON',  explorer: 'https://sonicscan.org/address/' },
+  FRAXTAL:   { name: 'Fraxtal',   short: 'FRX',  explorer: 'https://fraxscan.com/address/' },
+  MODE:      { name: 'Mode',      short: 'MODE', explorer: 'https://modescan.io/address/' },
+  FANTOM:    { name: 'Fantom',    short: 'FTM',  explorer: 'https://ftmscan.com/address/' },
+  ZKEVM:     { name: 'zkEVM',     short: 'ZKEV', explorer: 'https://zkevm.polygonscan.com/address/' },
+  XLAYER:    { name: 'X Layer',   short: 'XLAY', explorer: 'https://www.okx.com/web3/explorer/xlayer/address/' },
+  PLASMA:    { name: 'Plasma',    short: 'PLAS', explorer: '' },
+  HYPEREVM:  { name: 'HyperEVM',  short: 'HYPE', explorer: '' },
+  MONAD:     { name: 'Monad',     short: 'MON',  explorer: '' },
+  SEPOLIA:   { name: 'Sepolia',   short: 'SEP',  explorer: 'https://sepolia.etherscan.io/address/' },
+};
+
+// Per-chain accent color for the chain column
+const CHAIN_COLOR = {
+  MAINNET: '#6e7fa8', ARBITRUM: '#28a0f0', BASE: '#0052ff',
+  POLYGON: '#8247e5', OPTIMISM: '#ff7b7b', GNOSIS: '#4fb88a',
+  AVALANCHE: '#e84142', SONIC: '#fe9a4c', FRAXTAL: '#c0c0c0',
+  MODE: '#dffe00', FANTOM: '#5a9ce8', ZKEVM: '#8247e5',
+  XLAYER: '#cfd3da', PLASMA: '#e6c77a', HYPEREVM: '#97fce4',
+  MONAD: '#a78bfa', SEPOLIA: '#e6c77a',
 };
 
 const CHAIN_SLUG = {
-  MAINNET: 'ethereum',
-  ARBITRUM: 'arbitrum',
-  OPTIMISM: 'optimism',
-  POLYGON: 'polygon',
-  BASE: 'base',
-  GNOSIS: 'gnosis-chain',
-  AVALANCHE: 'avalanche',
-  SONIC: 'sonic',
-  FRAXTAL: 'fraxtal',
-  MODE: 'mode',
+  MAINNET: 'ethereum', ARBITRUM: 'arbitrum', OPTIMISM: 'optimism',
+  POLYGON: 'polygon', BASE: 'base', GNOSIS: 'gnosis-chain',
+  AVALANCHE: 'avalanche', SONIC: 'sonic', FRAXTAL: 'fraxtal', MODE: 'mode',
 };
 
 function fmt$(val) {
   const n = parseFloat(val);
-  if (isNaN(n)) return '-';
+  if (isNaN(n)) return '—';
   if (n >= 1e9) return '$' + (n / 1e9).toFixed(2) + 'B';
   if (n >= 1e6) return '$' + (n / 1e6).toFixed(2) + 'M';
   if (n >= 1e3) return '$' + (n / 1e3).toFixed(1) + 'K';
-  if (n >= 1) return '$' + n.toFixed(2);
-  if (n > 0) return '$' + n.toFixed(4);
+  if (n >= 1)   return '$' + n.toFixed(2);
+  if (n > 0)    return '$' + n.toFixed(4);
   return '$0';
 }
 
 function fmtPct(val) {
   const n = parseFloat(val);
-  if (isNaN(n)) return '-';
+  if (isNaN(n)) return '—';
   return (n * 100).toFixed(n < 0.0001 ? 4 : n < 0.01 ? 3 : 2) + '%';
 }
 
 function fmtApr(val) {
   const n = parseFloat(val);
-  if (isNaN(n) || n === 0) return '-';
-  // aprItems are already expressed as fractions (e.g. 0.042 = 4.2%)
+  if (isNaN(n) || n === 0) return '—';
   return (n * 100).toFixed(2) + '%';
 }
 
 function fmtUsage(vol, tvl) {
   const v = parseFloat(vol);
   const t = parseFloat(tvl);
-  if (!t || isNaN(v) || isNaN(t)) return { text: '-', cls: 'usage-low', val: 0 };
+  if (!t || isNaN(v) || isNaN(t)) return { text: '—', cls: 'usage-low', val: 0 };
   const ratio = v / t;
   let cls = 'usage-low';
   if (ratio >= 0.5) cls = 'usage-high';
@@ -601,8 +538,18 @@ function fmtUsage(vol, tvl) {
 
 function fmtNum(val) {
   const n = parseInt(val);
-  if (isNaN(n)) return '-';
+  if (isNaN(n)) return '—';
   return n.toLocaleString();
+}
+
+function typeShort(t) {
+  const map = {
+    WEIGHTED: 'WEIGHTED', COMPOSABLE_STABLE: 'STABLE',
+    META_STABLE: 'METASTBL', STABLE: 'STABLE',
+    GYROE: 'GYRO-E', GYRO: 'GYRO', FX: 'FX',
+    QUANT_AMM_WEIGHTED: 'QUANT', RECLAMM: 'reCLAMM',
+  };
+  return map[t] || (t || '').replace(/_/g, ' ');
 }
 
 function poolUrl(pool) {
@@ -636,33 +583,16 @@ async function fetchPools() {
       protocolVersion
       createTime
       hasErc4626
-      hook {
-        address
-        type
-      }
+      hook { address type }
       dynamicData {
-        totalLiquidity
-        volume24h
-        fees24h
-        yieldCapture24h
-        surplus24h
-        swapFee
-        holdersCount
-        lifetimeVolume
-        lifetimeSwapFees
-        swapEnabled
-        isPaused
-        isInRecoveryMode
-        aprItems {
-          apr
-          type
-          id
-        }
+        totalLiquidity volume24h fees24h
+        yieldCapture24h surplus24h
+        swapFee holdersCount
+        lifetimeVolume lifetimeSwapFees
+        swapEnabled isPaused isInRecoveryMode
+        aprItems { apr type id }
       }
-      poolTokens {
-        symbol
-        address
-      }
+      poolTokens { symbol address }
     }
   }`;
 
@@ -685,13 +615,11 @@ function processPool(p) {
   const usage = tvl > 0 ? vol / tvl : 0;
   const aprItems = d.aprItems || [];
   const totalApr = aprItems.reduce((sum, item) => sum + (parseFloat(item.apr) || 0), 0);
-  // "Yield APR" = APR coming from the tokens themselves (rate-provider / interest-bearing yield)
-  // Balancer API tags these with type IB_YIELD. We match any *YIELD* type to be safe.
+  // "Yield APR" = APR coming from the tokens themselves (rate-provider / IB yield)
   const yieldApr = aprItems
     .filter(i => i.type && /YIELD/i.test(i.type))
     .reduce((sum, item) => sum + (parseFloat(item.apr) || 0), 0);
 
-  // Balancer's "Yield 24h" headline breaks down into these three pieces.
   const swapFees24h = parseFloat(d.fees24h) || 0;
   const yield24h = parseFloat(d.yieldCapture24h) || 0;
   const surplus24h = parseFloat(d.surplus24h) || 0;
@@ -701,24 +629,21 @@ function processPool(p) {
     .filter(i => i.type === 'VEBAL_EMISSIONS')
     .reduce((sum, item) => sum + (parseFloat(item.apr) || 0), 0);
   const vebalEmissionsDaily = tvl > 0 ? vebalApr * tvl / 365 : 0;
+  const yieldDaily = tvl > 0 ? yieldApr * tvl / 365 : 0;
 
   return {
     ...p,
-    tvl,
-    vol,
-    fees: swapFees24h,         // kept for backwards compat (old sort key)
-    swapFees24h,
-    yield24h,
-    surplus24h,
+    tvl, vol,
+    fees: swapFees24h,
+    swapFees24h, yield24h, surplus24h,
     totalYield24h: swapFees24h + yield24h + surplus24h,
     swapFee: parseFloat(d.swapFee) || 0,
     usage,
     holders: parseInt(d.holdersCount) || 0,
-    totalApr,
-    yieldApr,
+    totalApr, yieldApr, yieldDaily,
     vebalEmissionsDaily,
     hookType: p.hook ? p.hook.type : null,
-    tokenSymbols: p.poolTokens.map(t => t.symbol).join(' / '),
+    tokenSymbols: p.poolTokens.map(t => t.symbol).join(' · '),
     searchText: [
       p.name, p.address, p.type, p.chain,
       ...p.poolTokens.map(t => t.symbol),
@@ -784,6 +709,7 @@ function applySorting() {
     fees: p => p.swapFees24h,
     swapFee: p => p.swapFee,
     yieldApr: p => p.yieldApr,
+    yieldDaily: p => p.yieldDaily,
     vebal: p => p.vebalEmissionsDaily,
     usage: p => p.usage,
     holders: p => p.holders,
@@ -809,62 +735,77 @@ function render() {
     const u = fmtUsage(p.vol, p.tvl);
     const balUrl = poolUrl(p);
     const expUrl = explorerUrl(p);
-    const vBadge = p.protocolVersion === 3 ? 'badge-v3' : 'badge-v2';
+    const chainInfo = CHAIN_INFO[p.chain];
+    const chainShort = (chainInfo && chainInfo.short) || p.chain.slice(0, 4);
+    const chainColor = CHAIN_COLOR[p.chain] || 'var(--fg)';
+    const vClass = p.protocolVersion === 3 ? 'ver v3' : 'ver';
 
     return `<tr>
       <td>
-        <div class="pool-name">
-          <span class="name" title="${esc(p.name)}">${esc(p.name)}</span>
+        <div class="pool-cell">
           <span class="tokens">${esc(p.tokenSymbols)}</span>
-          <span>
-            <a class="pool-link" href="${balUrl}" target="_blank">Balancer</a>
-            ${expUrl ? `&nbsp;·&nbsp;<a class="pool-link" href="${expUrl}" target="_blank">Explorer</a>` : ''}
+          <span class="name" title="${esc(p.name)}">${esc(p.name)}</span>
+          <span class="links">
+            <a href="${balUrl}" target="_blank" rel="noreferrer">[BAL]</a>${expUrl ? ` <a href="${expUrl}" target="_blank" rel="noreferrer">[SCAN]</a>` : ''}
           </span>
         </div>
       </td>
-      <td class="hide-sm"><span class="badge badge-type">${p.type.replace(/_/g, ' ')}</span></td>
-      <td class="hide-sm"><span class="badge badge-chain">${(CHAIN_INFO[p.chain] && CHAIN_INFO[p.chain].name) || p.chain}</span></td>
-      <td class="hide-md"><span class="badge ${vBadge}">v${p.protocolVersion}</span></td>
-      <td class="hide-md">${p.hookType ? `<span class="badge badge-hook">${p.hookType.replace(/_/g, ' ')}</span>` : '<span style="color:var(--text-muted)">-</span>'}</td>
+      <td><span class="type">${esc(typeShort(p.type))}</span></td>
+      <td><span class="chain" style="color:${chainColor}">${chainShort}</span></td>
+      <td class="center"><span class="${vClass}">v${p.protocolVersion}</span></td>
+      <td class="center">${p.hookType ? `<span class="hook">◆${esc(p.hookType.slice(0, 6))}</span>` : `<span class="hook none">–</span>`}</td>
       <td class="numeric">${fmt$(p.tvl)}</td>
       <td class="numeric">${fmt$(p.vol)}</td>
-      <td class="numeric hide-md">${fmt$(p.swapFees24h)}</td>
-      <td class="numeric fee-pct hide-md">${fmtPct(p.swapFee)}</td>
-      <td class="numeric"><span class="${p.yieldApr > 0 ? 'usage-high' : 'usage-low'}">${fmtApr(p.yieldApr)}</span></td>
-      <td class="numeric hide-md"><span class="${p.vebalEmissionsDaily > 0 ? 'usage-high' : 'usage-low'}">${p.vebalEmissionsDaily > 0 ? fmt$(p.vebalEmissionsDaily) : '-'}</span></td>
-      <td class="numeric hide-sm"><span class="${u.cls}">${u.text}</span></td>
-      <td class="numeric hide-md">${fmtNum(p.holders)}</td>
+      <td class="numeric">${fmt$(p.swapFees24h)}</td>
+      <td class="numeric fee-pct">${fmtPct(p.swapFee)}</td>
+      <td class="numeric"><span class="${p.yieldApr > 0 ? 'apr-pos' : 'muted'}">${fmtApr(p.yieldApr)}</span></td>
+      <td class="numeric"><span class="${p.yieldDaily > 0 ? 'apr-pos' : 'muted'}">${p.yieldDaily > 0 ? fmt$(p.yieldDaily) : '—'}</span></td>
+      <td class="numeric"><span class="${p.vebalEmissionsDaily > 0 ? 'apr-accent' : 'muted'}">${p.vebalEmissionsDaily > 0 ? fmt$(p.vebalEmissionsDaily) : '—'}</span></td>
+      <td class="numeric"><span class="${u.cls}">${u.text}</span></td>
+      <td class="numeric muted">${fmtNum(p.holders)}</td>
     </tr>`;
   }).join('');
 
-  // Update pagination
+  // Row click → open balancer pool page
+  tbody.querySelectorAll('tr').forEach((tr, idx) => {
+    tr.addEventListener('click', (e) => {
+      if (e.target.tagName === 'A') return;
+      const p = page[idx];
+      if (p) window.open(poolUrl(p), '_blank');
+    });
+  });
+
+  // Pagination
   const totalPages = Math.ceil(filteredPools.length / PAGE_SIZE);
   const pag = document.getElementById('pagination');
   pag.style.display = totalPages > 1 ? 'flex' : 'none';
   document.getElementById('page-info').textContent =
-    `Page ${currentPage + 1} of ${totalPages} (${filteredPools.length} pools)`;
+    `page ${currentPage + 1} / ${totalPages} · ${filteredPools.length.toLocaleString()} pools`;
   document.getElementById('btn-prev').disabled = currentPage === 0;
   document.getElementById('btn-next').disabled = currentPage >= totalPages - 1;
 
-  // Update header stats (totals update with every filter/search change)
+  // Aggregate stats
   const totalTvl = filteredPools.reduce((s, p) => s + p.tvl, 0);
   const totalVol = filteredPools.reduce((s, p) => s + p.vol, 0);
   const totalSwapFees = filteredPools.reduce((s, p) => s + p.swapFees24h, 0);
   const totalYield = filteredPools.reduce((s, p) => s + p.yield24h, 0);
-  const totalSurplus = filteredPools.reduce((s, p) => s + p.surplus24h, 0);
   const totalVebal = filteredPools.reduce((s, p) => s + p.vebalEmissionsDaily, 0);
   document.getElementById('stat-pools').textContent = filteredPools.length.toLocaleString();
   document.getElementById('stat-tvl').textContent = fmt$(totalTvl);
   document.getElementById('stat-vol').textContent = fmt$(totalVol);
   document.getElementById('stat-swap-fees').textContent = fmt$(totalSwapFees);
   document.getElementById('stat-yield').textContent = fmt$(totalYield);
-  document.getElementById('stat-surplus').textContent = fmt$(totalSurplus);
   document.getElementById('stat-vebal').textContent = fmt$(totalVebal);
+
+  // Topbar count + footer
+  document.getElementById('topbar-count').textContent = `[${filteredPools.length}/${allPools.length}]`;
+  document.getElementById('footer-sort').textContent = `${sortKey} ${sortDir}`;
+  document.getElementById('footer-rows').textContent = filteredPools.length.toLocaleString();
 }
 
 function esc(str) {
   const d = document.createElement('div');
-  d.textContent = str;
+  d.textContent = str == null ? '' : str;
   return d.innerHTML;
 }
 
@@ -876,16 +817,15 @@ document.querySelectorAll('thead th[data-sort]').forEach(th => {
       sortDir = sortDir === 'asc' ? 'desc' : 'asc';
     } else {
       sortKey = key;
-      sortDir = ['tvl', 'volume', 'fees', 'swapFee', 'yieldApr', 'vebal', 'usage', 'holders'].includes(key) ? 'desc' : 'asc';
+      sortDir = ['tvl', 'volume', 'fees', 'swapFee', 'yieldApr', 'yieldDaily', 'vebal', 'usage', 'holders'].includes(key) ? 'desc' : 'asc';
     }
 
-    // Update header UI
     document.querySelectorAll('thead th').forEach(h => {
       h.classList.remove('sorted');
-      h.querySelector('.sort-arrow').innerHTML = '&#9650;';
+      h.querySelector('.sort-arrow').innerHTML = '·';
     });
     th.classList.add('sorted');
-    th.querySelector('.sort-arrow').innerHTML = sortDir === 'asc' ? '&#9650;' : '&#9660;';
+    th.querySelector('.sort-arrow').innerHTML = sortDir === 'asc' ? '▲' : '▼';
 
     applySorting();
     currentPage = 0;
@@ -901,15 +841,23 @@ document.querySelectorAll('thead th[data-sort]').forEach(th => {
 
 // Pagination
 document.getElementById('btn-prev').addEventListener('click', () => {
-  if (currentPage > 0) { currentPage--; render(); }
+  if (currentPage > 0) { currentPage--; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
 });
 document.getElementById('btn-next').addEventListener('click', () => {
   const totalPages = Math.ceil(filteredPools.length / PAGE_SIZE);
-  if (currentPage < totalPages - 1) { currentPage++; render(); }
+  if (currentPage < totalPages - 1) { currentPage++; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
 });
 
 // Refresh
 document.getElementById('btn-refresh').addEventListener('click', loadData);
+
+// Hotkeys: / = focus search, R = refresh, C = csv
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.key === '/') { e.preventDefault(); document.getElementById('search').focus(); }
+  else if (e.key === 'r' || e.key === 'R') { loadData(); }
+  else if (e.key === 'c' || e.key === 'C') { exportCsv(); }
+});
 
 // CSV export (exports currently filtered pools, respecting sort order)
 function csvEscape(val) {
@@ -929,7 +877,7 @@ function exportCsv() {
     'Address', 'TVL (USD)', 'Volume 24h (USD)',
     'Swap Fees 24h (USD)', 'Yield 24h (USD)', 'Surplus 24h (USD)', 'Total Yield 24h (USD)',
     'Swap Fee (%)', 'Yield APR (%)', 'Total APR (%)',
-    'BAL Emissions/day (USD)',
+    'Yield/day (USD)', 'BAL Emissions/day (USD)',
     'Usage (Vol/TVL %)', 'Holders', 'Balancer URL',
   ];
   const rows = filteredPools.map(p => [
@@ -949,6 +897,7 @@ function exportCsv() {
     (p.swapFee * 100).toFixed(4),
     (p.yieldApr * 100).toFixed(4),
     (p.totalApr * 100).toFixed(4),
+    p.yieldDaily.toFixed(2),
     p.vebalEmissionsDaily.toFixed(2),
     p.tvl > 0 ? (p.usage * 100).toFixed(2) : '',
     p.holders,
@@ -959,7 +908,6 @@ function exportCsv() {
     .map(row => row.map(csvEscape).join(','))
     .join('\n');
 
-  // Prepend BOM so Excel detects UTF-8 correctly
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -978,10 +926,13 @@ async function loadData() {
   const loading = document.getElementById('loading');
   const table = document.getElementById('pool-table');
   const error = document.getElementById('error');
+  const topbar = document.getElementById('topbar');
 
-  loading.style.display = 'flex';
+  loading.style.display = 'block';
   table.style.display = 'none';
   error.style.display = 'none';
+  topbar.classList.add('loading');
+  document.getElementById('topbar-status-text').textContent = 'SYNC…';
 
   try {
     const raw = await fetchPools();
@@ -993,11 +944,17 @@ async function loadData() {
 
     loading.style.display = 'none';
     table.style.display = 'table';
-    document.getElementById('stat-time').textContent = new Date().toLocaleTimeString();
+    topbar.classList.remove('loading');
+    document.getElementById('topbar-status-text').textContent = 'LIVE';
+    const now = new Date();
+    document.getElementById('stat-time').textContent = now.toTimeString().slice(0, 8);
+    document.getElementById('topbar-time').textContent = now.toISOString().replace('T', ' ').slice(0, 19) + 'Z';
   } catch (e) {
     loading.style.display = 'none';
     error.style.display = 'block';
-    error.textContent = 'Error loading pools: ' + e.message;
+    error.textContent = '> ERROR: ' + e.message;
+    topbar.classList.remove('loading');
+    document.getElementById('topbar-status-text').textContent = 'ERR';
     console.error(e);
   }
 }
