@@ -290,6 +290,16 @@
 
   /* ---------- Responsive: tablet ---------- */
   @media (max-width: 900px) {
+    /* CRT scanline uses mix-blend-mode on a fixed full-viewport layer,
+       which forces compositor work on every paint and drains battery on
+       mobile. Horizontal-scrolling the 1400px table makes this worse.
+       Keep the amber vibe but drop the scanline on small screens. */
+    body::after { display: none; }
+
+    /* The 4-layer gradient + background-attachment: local on .table-wrap
+       causes scroll jank on iOS Safari. Use a plain background on mobile. */
+    .table-wrap { background: var(--bg); }
+
     .topbar { padding: 8px 12px; gap: 10px; }
     .topbar .sub, .topbar .time { display: none; }
     .kpi-strip { grid-template-columns: repeat(4, 1fr); }
@@ -554,7 +564,19 @@ function typeShort(t) {
 
 function poolUrl(pool) {
   const slug = CHAIN_SLUG[pool.chain] || pool.chain.toLowerCase();
-  return `${BALANCER_APP}/${slug}/v${pool.protocolVersion}/${pool.address}`;
+  // v2 pool pages are keyed by the full 66-char pool id (address + pool index),
+  // e.g. 0x5c6e…014. v3 uses the plain 40-char contract address.
+  const key = pool.protocolVersion === 2 ? pool.id : pool.address;
+  return `${BALANCER_APP}/${slug}/v${pool.protocolVersion}/${key}`;
+}
+
+// Debounce: coalesce bursty events (search keystrokes) into one call.
+function debounce(fn, ms) {
+  let t;
+  return function (...args) {
+    clearTimeout(t);
+    t = setTimeout(() => fn.apply(this, args), ms);
+  };
 }
 
 function explorerUrl(pool) {
@@ -681,6 +703,8 @@ function applyFilters() {
   const hook = document.getElementById('filter-hook').value;
   const minTvl = parseFloat(document.getElementById('filter-min-tvl').value) || 0;
 
+  // allPools is kept pre-sorted (see applySorting); Array.filter preserves order,
+  // so filteredPools inherits the current sort — no re-sort needed per keystroke.
   filteredPools = allPools.filter(p => {
     if (search && !p.searchText.includes(search)) return false;
     if (chain && p.chain !== chain) return false;
@@ -692,11 +716,13 @@ function applyFilters() {
     return true;
   });
 
-  applySorting();
   currentPage = 0;
   render();
 }
 
+// Sort allPools in-place according to the current sortKey/sortDir.
+// Called once on load and again whenever the user clicks a sort header —
+// not on every filter change.
 function applySorting() {
   const keyFn = {
     name: p => p.name.toLowerCase(),
@@ -718,7 +744,7 @@ function applySorting() {
   const fn = keyFn[sortKey] || keyFn.tvl;
   const dir = sortDir === 'asc' ? 1 : -1;
 
-  filteredPools.sort((a, b) => {
+  allPools.sort((a, b) => {
     const va = fn(a), vb = fn(b);
     if (va < vb) return -1 * dir;
     if (va > vb) return 1 * dir;
@@ -731,7 +757,7 @@ function render() {
   const start = currentPage * PAGE_SIZE;
   const page = filteredPools.slice(start, start + PAGE_SIZE);
 
-  tbody.innerHTML = page.map(p => {
+  tbody.innerHTML = page.map((p, idx) => {
     const u = fmtUsage(p.vol, p.tvl);
     const balUrl = poolUrl(p);
     const expUrl = explorerUrl(p);
@@ -740,7 +766,7 @@ function render() {
     const chainColor = CHAIN_COLOR[p.chain] || 'var(--fg)';
     const vClass = p.protocolVersion === 3 ? 'ver v3' : 'ver';
 
-    return `<tr>
+    return `<tr data-idx="${idx}">
       <td>
         <div class="pool-cell">
           <span class="tokens">${esc(p.tokenSymbols)}</span>
@@ -766,14 +792,8 @@ function render() {
     </tr>`;
   }).join('');
 
-  // Row click → open balancer pool page
-  tbody.querySelectorAll('tr').forEach((tr, idx) => {
-    tr.addEventListener('click', (e) => {
-      if (e.target.tagName === 'A') return;
-      const p = page[idx];
-      if (p) window.open(poolUrl(p), '_blank');
-    });
-  });
+  // Row click is handled by a single delegated listener attached once,
+  // outside render(). See "tbody-click-delegation" block near the bottom.
 
   // Pagination
   const totalPages = Math.ceil(filteredPools.length / PAGE_SIZE);
@@ -827,16 +847,31 @@ document.querySelectorAll('thead th[data-sort]').forEach(th => {
     th.classList.add('sorted');
     th.querySelector('.sort-arrow').innerHTML = sortDir === 'asc' ? '▲' : '▼';
 
+    // Re-sort allPools, then re-filter; filteredPools picks up the new order.
     applySorting();
-    currentPage = 0;
-    render();
+    applyFilters();
   });
 });
 
-// Filter listeners
+// Filter listeners. Only the search input gets debounced — the <select>s fire
+// change events once per interaction, so they don't need it.
+const debouncedApplyFilters = debounce(applyFilters, 150);
 ['search', 'filter-chain', 'filter-type', 'filter-version', 'filter-hook', 'filter-min-tvl'].forEach(id => {
   const el = document.getElementById(id);
-  el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', applyFilters);
+  const handler = id === 'search' ? debouncedApplyFilters : applyFilters;
+  el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', handler);
+});
+
+// tbody-click-delegation: one listener instead of 50-per-render.
+// Ignores clicks on <a> so the [BAL] / [SCAN] links still work naturally.
+document.getElementById('pool-tbody').addEventListener('click', (e) => {
+  if (e.target.closest('a')) return;
+  const tr = e.target.closest('tr[data-idx]');
+  if (!tr) return;
+  const idx = parseInt(tr.dataset.idx, 10);
+  const page = filteredPools.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE);
+  const p = page[idx];
+  if (p) window.open(poolUrl(p), '_blank');
 });
 
 // Pagination
@@ -940,6 +975,7 @@ async function loadData() {
       .filter(p => !HIDDEN_POOL_TYPES.has(p.type))
       .map(processPool);
     populateFilters();
+    applySorting();   // make sure allPools matches the current sortKey/sortDir
     applyFilters();
 
     loading.style.display = 'none';
