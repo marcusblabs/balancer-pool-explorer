@@ -233,14 +233,6 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     max-width: 340px;
   }
-  .pool-cell .links {
-    font-size: 9px;
-    color: var(--fg-mute);
-    letter-spacing: 0.5px;
-    margin-top: 2px;
-  }
-  .pool-cell .links a:hover { color: var(--accent); }
-
   /* Badges / cells */
   .type { color: var(--fg-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
   .chain { font-weight: 600; font-size: 11px; letter-spacing: 0.3px; }
@@ -579,12 +571,6 @@ function debounce(fn, ms) {
   };
 }
 
-function explorerUrl(pool) {
-  const info = CHAIN_INFO[pool.chain];
-  if (!info || !info.explorer) return null;
-  return info.explorer + pool.address;
-}
-
 async function fetchPools() {
   // tagNotIn: ["BLACK_LISTED"] is the same filter Balancer's own frontend uses
   // to hide pools the team has flagged as broken, deprecated, test, or scam.
@@ -759,8 +745,6 @@ function render() {
 
   tbody.innerHTML = page.map((p, idx) => {
     const u = fmtUsage(p.vol, p.tvl);
-    const balUrl = poolUrl(p);
-    const expUrl = explorerUrl(p);
     const chainInfo = CHAIN_INFO[p.chain];
     const chainShort = (chainInfo && chainInfo.short) || p.chain.slice(0, 4);
     const chainColor = CHAIN_COLOR[p.chain] || 'var(--fg)';
@@ -771,9 +755,6 @@ function render() {
         <div class="pool-cell">
           <span class="tokens">${esc(p.tokenSymbols)}</span>
           <span class="name" title="${esc(p.name)}">${esc(p.name)}</span>
-          <span class="links">
-            <a href="${balUrl}" target="_blank" rel="noreferrer">[BAL]</a>${expUrl ? ` <a href="${expUrl}" target="_blank" rel="noreferrer">[SCAN]</a>` : ''}
-          </span>
         </div>
       </td>
       <td><span class="type">${esc(typeShort(p.type))}</span></td>
@@ -863,7 +844,8 @@ const debouncedApplyFilters = debounce(applyFilters, 150);
 });
 
 // tbody-click-delegation: one listener instead of 50-per-render.
-// Ignores clicks on <a> so the [BAL] / [SCAN] links still work naturally.
+// The <a> guard is a defensive no-op now (no links inside rows), kept in
+// case any future links are added back to the pool cell.
 document.getElementById('pool-tbody').addEventListener('click', (e) => {
   if (e.target.closest('a')) return;
   const tr = e.target.closest('tr[data-idx]');
