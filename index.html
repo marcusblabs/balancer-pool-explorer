@@ -463,7 +463,6 @@
         <th data-sort="chain" data-col="chain">Chain <span class="sort-arrow">·</span></th>
         <th data-sort="version" data-col="version" class="center">Ver <span class="sort-arrow">·</span></th>
         <th data-sort="hook" data-col="hook" class="center">Hook <span class="sort-arrow">·</span></th>
-        <th data-sort="created" data-col="created">Created <span class="sort-arrow">·</span></th>
         <th data-sort="tvl" data-col="tvl" class="numeric sorted">TVL <span class="sort-arrow">▼</span></th>
         <th data-sort="volume" data-col="volume" class="numeric">Vol 24h <span class="sort-arrow">·</span></th>
         <th data-sort="fees" data-col="fees" class="numeric">Fees 24h <span class="sort-arrow">·</span></th>
@@ -473,6 +472,7 @@
         <th data-sort="vebal" data-col="vebal" class="numeric" title="Daily USD value of core BAL gauge emissions (VEBAL_EMISSIONS APR × TVL / 365)">BAL Em./day <span class="sort-arrow">·</span></th>
         <th data-sort="usage" data-col="usage" class="numeric">Usage (V/T) <span class="sort-arrow">·</span></th>
         <th data-sort="holders" data-col="holders" class="numeric">Holders <span class="sort-arrow">·</span></th>
+        <th data-sort="created" data-col="created">Created <span class="sort-arrow">·</span></th>
       </tr>
     </thead>
     <tbody id="pool-tbody"></tbody>
@@ -831,7 +831,6 @@ function render() {
       <td data-col="chain"><span class="chain" style="color:${chainColor}">${chainShort}</span></td>
       <td data-col="version" class="center"><span class="${vClass}">v${p.protocolVersion}</span></td>
       <td data-col="hook" class="center">${p.hookType ? `<span class="hook">◆${esc(p.hookType.slice(0, 6))}</span>` : `<span class="hook none">–</span>`}</td>
-      <td data-col="created"><span class="muted" title="${fmtAge(p.createdAt)}">${fmtDate(p.createdAt)}</span></td>
       <td data-col="tvl" class="numeric">${fmt$(p.tvl)}</td>
       <td data-col="volume" class="numeric">${fmt$(p.vol)}</td>
       <td data-col="fees" class="numeric">${fmt$(p.swapFees24h)}</td>
@@ -841,6 +840,7 @@ function render() {
       <td data-col="vebal" class="numeric"><span class="${p.vebalEmissionsDaily > 0 ? 'apr-accent' : 'muted'}">${p.vebalEmissionsDaily > 0 ? fmt$(p.vebalEmissionsDaily) : '—'}</span></td>
       <td data-col="usage" class="numeric"><span class="${u.cls}">${u.text}</span></td>
       <td data-col="holders" class="numeric muted">${fmtNum(p.holders)}</td>
+      <td data-col="created"><span class="muted" title="${fmtAge(p.createdAt)}">${fmtDate(p.createdAt)}</span></td>
     </tr>`;
   }).join('');
 
@@ -962,12 +962,11 @@ function exportCsv() {
   }
   const headers = [
     'Pool Name', 'Tokens', 'Type', 'Chain', 'Version', 'Hook',
-    'Created (UTC)',
     'Address', 'TVL (USD)', 'Volume 24h (USD)',
     'Swap Fees 24h (USD)', 'Yield 24h (USD)', 'Surplus 24h (USD)', 'Total Yield 24h (USD)',
     'Swap Fee (%)', 'Yield APR (%)', 'Total APR (%)',
     'Yield/day (USD)', 'BAL Emissions/day (USD)',
-    'Usage (Vol/TVL %)', 'Holders', 'Balancer URL',
+    'Usage (Vol/TVL %)', 'Holders', 'Balancer URL', 'Created (UTC)',
   ];
   const rows = filteredPools.map(p => [
     p.name,
@@ -976,7 +975,6 @@ function exportCsv() {
     (CHAIN_INFO[p.chain] && CHAIN_INFO[p.chain].name) || p.chain,
     'v' + p.protocolVersion,
     p.hookType ? p.hookType.replace(/_/g, ' ') : '',
-    fmtDate(p.createdAt),
     p.address,
     p.tvl.toFixed(2),
     p.vol.toFixed(2),
@@ -992,6 +990,7 @@ function exportCsv() {
     p.tvl > 0 ? (p.usage * 100).toFixed(2) : '',
     p.holders,
     poolUrl(p),
+    fmtDate(p.createdAt),
   ]);
 
   const csv = [headers, ...rows]
@@ -1058,7 +1057,6 @@ const COLUMNS = [
   { key: 'chain', label: 'Chain' },
   { key: 'version', label: 'Ver' },
   { key: 'hook', label: 'Hook' },
-  { key: 'created', label: 'Created' },
   { key: 'tvl', label: 'TVL' },
   { key: 'volume', label: 'Vol 24h' },
   { key: 'fees', label: 'Fees 24h' },
@@ -1068,6 +1066,7 @@ const COLUMNS = [
   { key: 'vebal', label: 'BAL Em./day' },
   { key: 'usage', label: 'Usage (V/T)' },
   { key: 'holders', label: 'Holders' },
+  { key: 'created', label: 'Created' },
 ];
 const COLS_KEY = 'bpe.hiddenCols.v1';
 let hiddenCols = new Set();
