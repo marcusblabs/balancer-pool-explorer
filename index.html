@@ -758,7 +758,9 @@ function populateFilters() {
   types.forEach(t => {
     const opt = document.createElement('option');
     opt.value = t;
-    opt.textContent = t.replace(/_/g, ' ');
+    // Same friendly names as the table (AutoRange, CoW AMM, …); keep
+    // COMPOSABLE_STABLE spelled out so it doesn't collide with STABLE.
+    opt.textContent = t === 'COMPOSABLE_STABLE' ? 'COMPOSABLE STABLE' : typeShort(t);
     typeSelect.appendChild(opt);
   });
 }
