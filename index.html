@@ -524,7 +524,10 @@ const HIDDEN_POOL_TYPES = new Set([
 //   SONIC   - user requested removal (Beets territory, not balancer.fi)
 //   SEPOLIA - testnet; fake TVL, not a production pool
 //   ZKEVM   - balancer.fi no longer serves zkEVM (every slug errors); network wound down
-const HIDDEN_CHAINS = new Set(['SONIC', 'SEPOLIA', 'ZKEVM']);
+//   FANTOM  - user requested removal (legacy Beets territory)
+//   MODE    - user requested removal (network being sunset on Balancer)
+//   FRAXTAL - user requested removal
+const HIDDEN_CHAINS = new Set(['SONIC', 'SEPOLIA', 'ZKEVM', 'FANTOM', 'MODE', 'FRAXTAL']);
 
 // Chain display names and explorer URLs
 const CHAIN_INFO = {
