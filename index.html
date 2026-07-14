@@ -513,10 +513,18 @@ let currentPage = 0;
 // Balancer's own frontend does not display any of these by default.
 const HIDDEN_POOL_TYPES = new Set([
   'LIQUIDITY_BOOTSTRAPPING',
+  'FIXED_LBP',              // LBP variant — same removal reason
   'INVESTMENT',
   'ELEMENT',
   'LINEAR',
+  'UNKNOWN',                // unclassifiable legacy v2 pools; balancer.fi crashes rendering them
 ]);
+
+// Chains we never want to show.
+//   SONIC   - user requested removal (Beets territory, not balancer.fi)
+//   SEPOLIA - testnet; fake TVL, not a production pool
+//   ZKEVM   - balancer.fi no longer serves zkEVM (every slug errors); network wound down
+const HIDDEN_CHAINS = new Set(['SONIC', 'SEPOLIA', 'ZKEVM']);
 
 // Chain display names and explorer URLs
 const CHAIN_INFO = {
@@ -549,10 +557,13 @@ const CHAIN_COLOR = {
   MONAD: '#bca5fc', SEPOLIA: '#a0aec0',
 };
 
+// balancer.fi URL slugs — every entry live-verified 2026-07 (a wrong slug
+// SSR-crashes balancer.fi, e.g. the old 'gnosis-chain' → digest 1502723864).
 const CHAIN_SLUG = {
   MAINNET: 'ethereum', ARBITRUM: 'arbitrum', OPTIMISM: 'optimism',
-  POLYGON: 'polygon', BASE: 'base', GNOSIS: 'gnosis-chain',
-  AVALANCHE: 'avalanche', SONIC: 'sonic', FRAXTAL: 'fraxtal', MODE: 'mode',
+  POLYGON: 'polygon', BASE: 'base', GNOSIS: 'gnosis',
+  AVALANCHE: 'avalanche', FRAXTAL: 'fraxtal', MODE: 'mode',
+  FANTOM: 'fantom', PLASMA: 'plasma', HYPEREVM: 'hyperevm', MONAD: 'monad',
 };
 
 function fmt$(val) {
@@ -616,8 +627,8 @@ function typeShort(t) {
   const map = {
     WEIGHTED: 'WEIGHTED', COMPOSABLE_STABLE: 'STABLE',
     META_STABLE: 'METASTBL', STABLE: 'STABLE',
-    GYROE: 'GYRO-E', GYRO: 'GYRO', FX: 'FX',
-    QUANT_AMM_WEIGHTED: 'QUANT', RECLAMM: 'reCLAMM',
+    GYROE: 'GYRO-E', GYRO: 'GYRO', GYRO3: 'GYRO-3', FX: 'FX',
+    QUANT_AMM_WEIGHTED: 'QUANT', RECLAMM: 'AutoRange', COW_AMM: 'CoW AMM',
   };
   return map[t] || (t || '').replace(/_/g, ' ');
 }
@@ -625,9 +636,11 @@ function typeShort(t) {
 function poolUrl(pool) {
   const slug = CHAIN_SLUG[pool.chain] || pool.chain.toLowerCase();
   // v2 pool pages are keyed by the full 66-char pool id (address + pool index),
-  // e.g. 0x5c6e…014. v3 uses the plain 40-char contract address.
+  // e.g. 0x5c6e…014. v1 (CoW AMM) and v3 use the plain 40-char contract address.
   const key = pool.protocolVersion === 2 ? pool.id : pool.address;
-  return `${BALANCER_APP}/${slug}/v${pool.protocolVersion}/${key}`;
+  // v1 pools are CoW AMMs; balancer.fi's canonical segment for them is "cow".
+  const seg = pool.protocolVersion === 1 ? 'cow' : 'v' + pool.protocolVersion;
+  return `${BALANCER_APP}/${slug}/${seg}/${key}`;
 }
 
 // Debounce: coalesce bursty events (search keystrokes) into one call.
@@ -1026,7 +1039,7 @@ async function loadData() {
   try {
     const raw = await fetchPools();
     allPools = raw
-      .filter(p => !HIDDEN_POOL_TYPES.has(p.type))
+      .filter(p => !HIDDEN_POOL_TYPES.has(p.type) && !HIDDEN_CHAINS.has(p.chain))
       .map(processPool);
     populateFilters();
     applySorting();   // make sure allPools matches the current sortKey/sortDir
